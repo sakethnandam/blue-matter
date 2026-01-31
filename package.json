@@ -1,0 +1,77 @@
+{
+  "name": "untitled",
+  "displayName": "untitled",
+  "description": "Understand your code. Learn data structures and concepts on a use-and-learn basis.",
+  "version": "0.1.0",
+  "publisher": "untitled",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Education",
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:untitled.explainFile",
+    "onCommand:untitled.explainSelection",
+    "onCommand:untitled.openPanel",
+    "onLanguage:python"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "untitled.openPanel",
+        "title": "untitled: Open panel"
+      },
+      {
+        "command": "untitled.explainFile",
+        "title": "untitled: Explain file"
+      },
+      {
+        "command": "untitled.explainSelection",
+        "title": "untitled: Explain selection"
+      }
+    ],
+    "configuration": {
+      "title": "untitled",
+      "properties": {
+        "untitled.llmApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for OpenAI, Anthropic, or OpenRouter (for contextual summaries and alternatives)."
+        },
+        "untitled.llmProvider": {
+          "type": "string",
+          "enum": ["openai", "anthropic", "openrouter"],
+          "default": "openai",
+          "description": "LLM provider for summaries. Use openrouter for free models."
+        },
+        "untitled.openRouterModel": {
+          "type": "string",
+          "default": "google/gemma-3-4b-it:free",
+          "description": "OpenRouter model ID (e.g. google/gemma-3-4b-it:free). Append :free for free models."
+        },
+        "untitled.youtubeApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "YouTube Data API v3 key for fetching explainer videos."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1"
+  }
+}
