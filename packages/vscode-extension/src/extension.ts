@@ -7,6 +7,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { getPanel } from './panel';
 import { getCore, promptForApiKey, hasStoredApiKey, clearStoredApiKey } from './coreAdapter';
+import { registerExplainCodeLensProvider } from './explainCodeLens';
 
 const DEBUG_LOG = (loc: string, msg: string, data?: Record<string, unknown>) => {
   // #region agent log
@@ -60,7 +61,8 @@ export function activate(context: vscode.ExtensionContext): void {
         const message = err instanceof Error ? err.message : String(err);
         vscode.window.showErrorMessage(`Untitled: ${message}`);
       }
-    })
+    }),
+    registerExplainCodeLensProvider()
   );
 
   context.subscriptions.push(
