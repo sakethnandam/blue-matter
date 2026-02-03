@@ -1,4 +1,13 @@
-.env
 node_modules/
-out/
+dist/
+*.vsix
+.DS_Store
+.env
+.env.local
+*.log
+coverage/
+.nyc_output/
+*.sqlite
+*.sqlite3
 .vscode-test/
+out/

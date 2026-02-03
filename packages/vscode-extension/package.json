@@ -1,0 +1,136 @@
+{
+  "name": "untitled",
+  "displayName": "Untitled",
+  "description": "Grammarly for Code - Context-aware code explanations and progressive learning",
+  "version": "0.1.0",
+  "publisher": "untitled",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other",
+    "Machine Learning",
+    "Education"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "untitled.explainCode",
+        "title": "Untitled: Explain Selected Code"
+      },
+      {
+        "command": "untitled.explainFile",
+        "title": "Untitled: Explain Current File"
+      },
+      {
+        "command": "untitled.addAnnotation",
+        "title": "Untitled: Add Annotation"
+      },
+      {
+        "command": "untitled.searchAnnotations",
+        "title": "Untitled: Search Annotations"
+      },
+      {
+        "command": "untitled.openPanel",
+        "title": "Untitled: Open Explanation Panel"
+      },
+      {
+        "command": "untitled.indexWorkspace",
+        "title": "Untitled: Index Workspace"
+      },
+      {
+        "command": "untitled.settings",
+        "title": "Untitled: Open Settings"
+      },
+      {
+        "command": "untitled.setApiKey",
+        "title": "Untitled: Set API Key"
+      },
+      {
+        "command": "untitled.clearStoredApiKey",
+        "title": "Untitled: Clear Stored API Key"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "untitled.explainCode",
+          "when": "editorHasSelection",
+          "group": "navigation"
+        },
+        {
+          "command": "untitled.addAnnotation",
+          "when": "editorHasSelection",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Untitled",
+      "properties": {
+        "untitled.apiProvider": {
+          "type": "string",
+          "enum": ["openrouter", "anthropic", "openai", "local"],
+          "default": "openrouter",
+          "description": "AI provider. Use 'openrouter' with a free key for free models (e.g. nvidia/nemotron-3-nano-30b-a3b:free). Set your API key via command 'Untitled: Set API Key' or OPENROUTER_API_KEY / ANTHROPIC_API_KEY env vars (PRD 6.2: key in keychain only)."
+        },
+        "untitled.openRouterModel": {
+          "type": "string",
+          "default": "nvidia/nemotron-3-nano-30b-a3b:free",
+          "description": "Open Router model id (when apiProvider is openrouter). Free: nvidia/nemotron-3-nano-30b-a3b:free, meta-llama/llama-3.3-70b-instruct:free, stepfun/step-3.5-flash:free"
+        },
+        "untitled.privacyMode": {
+          "type": "string",
+          "enum": ["standard", "strict"],
+          "default": "standard",
+          "description": "Privacy mode: standard (anonymize code) or strict (cache-only, never send code)"
+        },
+        "untitled.autoIndex": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto-index workspace on startup"
+        },
+        "untitled.explanationsPerHour": {
+          "type": "number",
+          "default": 100,
+          "description": "Max AI explanations per hour (free tier)"
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "untitled.explainCode",
+        "key": "ctrl+shift+e",
+        "mac": "cmd+shift+e"
+      },
+      {
+        "command": "untitled.explainFile",
+        "key": "ctrl+shift+f",
+        "mac": "cmd+shift+f"
+      },
+      {
+        "command": "untitled.addAnnotation",
+        "key": "ctrl+shift+n",
+        "mac": "cmd+shift+n"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p .",
+    "watch": "tsc -watch -p .",
+    "package": "vsce package --no-dependencies"
+  },
+  "dependencies": {
+    "@untitled/core": "file:../core"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/node": "^22.10.1",
+    "typescript": "^5.7.2"
+  }
+}

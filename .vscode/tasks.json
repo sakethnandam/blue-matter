@@ -1,0 +1,24 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build Untitled",
+      "type": "shell",
+      "command": "npm run build -w packages/core && npm run compile -w packages/vscode-extension",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {}
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared",
+        "showReuseMessage": false
+      },
+      "problemMatcher": ["$tsc"]
+    }
+  ]
+}
