@@ -42,13 +42,17 @@ export function registerExplainCodeLensProvider(): vscode.Disposable {
       if (!text.trim()) {
         return [];
       }
-      // Place the lens above the first line of the selection
+      // Place the lens above the first line of the selection; pass URI and range so the command does not rely on current selection (PRD 6: security).
       const range = new vscode.Range(sel.start.line, 0, sel.start.line, 0);
+      const rangeArg = {
+        start: { line: sel.start.line, character: sel.start.character },
+        end: { line: sel.end.line, character: sel.end.character },
+      };
       return [
         new vscode.CodeLens(range, {
           title: '$(book) Explain',
           command: 'untitled.explainCode',
-          arguments: [],
+          arguments: [document.uri.toString(), rangeArg],
         }),
       ];
     },
