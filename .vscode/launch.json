@@ -2,15 +2,52 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run Extension",
+      "name": "Run Untitled Extension",
       "type": "extensionHost",
       "request": "launch",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}"
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-extension"
       ],
       "outFiles": [
-        "${workspaceFolder}/out/**/*.js"
-      ]
+        "${workspaceFolder}/packages/vscode-extension/out/**/*.js"
+      ],
+      "preLaunchTask": "Build Untitled",
+      "sourceMaps": true,
+      "env": {
+        "NODE_OPTIONS": "--no-deprecation"
+      }
+    },
+    {
+      "name": "Run Untitled Extension (no build)",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-extension"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/packages/vscode-extension/out/**/*.js"
+      ],
+      "sourceMaps": true,
+      "env": {
+        "NODE_OPTIONS": "--no-deprecation"
+      }
+    },
+    {
+      "name": "Run Untitled Extension (open test folder)",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "${env:UNTITLED_TEST_FOLDER}",
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-extension"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/packages/vscode-extension/out/**/*.js"
+      ],
+      "preLaunchTask": "Build Untitled",
+      "sourceMaps": true,
+      "env": {
+        "NODE_OPTIONS": "--no-deprecation"
+      }
     }
   ]
 }

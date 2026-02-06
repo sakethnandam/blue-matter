@@ -1,107 +1,77 @@
-# untitled
+# Untitled — Grammarly for Code
 
-Your code is untitled until you own it.
+**Untitled** is a platform-level code intelligence system: a context-aware explanation engine that works across editors and IDEs. It indexes your codebase, caches explanations by structural signature, and calls AI only when needed—so you learn as you build, without repeated prompting.
 
-A VS Code / Cursor extension that analyzes your Python code (file or selection), detects concepts (data structures, loops, libraries), and shows explainer videos plus contextual summaries so you learn on a **use-and-learn** basis.
+## Architecture: One Brain, Many Hands
 
-## How to use
+- **@untitled/core** — Platform-agnostic engine: indexing, caching, context building, AI orchestration.
+- **VS Code / Cursor extension** — Thin adapter that uses the core; same logic can power Chrome, Replit, Colab, etc.
 
-1. Open a Python file. When you open the **untitled** panel (via Command Palette or by clicking **Explain**), it opens **side-by-side** with your code (to the right of the editor).
-2. **From the editor:** Select some code. An **Explain** CodeLens appears above the selection. Click it to open the panel (if needed) and run **Explain selection**.
-3. **From the Command Palette (Cmd+Shift+P):** Run **untitled: Open panel** to show the panel, then in the panel click **Explain file** or **Explain selection**. You can also run **untitled: Explain file** or **untitled: Explain selection** directly.
-4. For each detected concept you get:
-   - A short explainer video (YouTube, 1–5 min, 5k+ views) when a YouTube API key is set.
-   - A contextual summary and **See alternatives** (e.g. deque vs list) when an LLM API key is set.
+## Quick Start
 
-## Settings
-
-**Recommended: use a `.env` file** so your API keys stay out of version control. Copy `.env.example` to `.env` in your workspace root and add your keys:
-
-```env
-UNTITLED_YOUTUBE_API_KEY=your_youtube_api_key
-UNTITLED_LLM_API_KEY=your_openai_or_anthropic_or_openrouter_key
-UNTITLED_LLM_PROVIDER=openai
-# For free LLM via OpenRouter (see below):
-# UNTITLED_LLM_PROVIDER=openrouter
-# UNTITLED_OPENROUTER_MODEL=google/gemma-3-4b-it:free
-```
-
-These env vars override VS Code settings when set. Do not commit `.env` (it is in `.gitignore`).
-
-**Alternatively**, configure in **Settings** (search for `untitled`):
-
-| Setting | Description |
-|--------|-------------|
-| `untitled.youtubeApiKey` | YouTube Data API v3 key. Get one in [Google Cloud Console](https://console.cloud.google.com/apis/credentials). Enable "YouTube Data API v3". |
-| `untitled.llmApiKey` | API key for OpenAI, Anthropic, or OpenRouter (for contextual summaries and alternatives). |
-| `untitled.llmProvider` | `openai`, `anthropic`, or `openrouter`. Use `openrouter` for free models. |
-| `untitled.openRouterModel` | OpenRouter model ID (e.g. `google/gemma-3-4b-it:free`). Append `:free` for free models. |
-
-Videos and summaries are fetched with your keys; no backend required.
-
----
-
-### Using a free LLM with OpenRouter
-
-You can use a **free** model via [OpenRouter](https://openrouter.ai) instead of paid OpenAI/Anthropic. Steps:
-
-**Step 1: Get an OpenRouter API key**
-
-1. Go to [https://openrouter.ai](https://openrouter.ai).
-2. Click **Sign in** (top right) and sign in with Google, GitHub, or email.
-3. Open your **Keys** page: click your profile/avatar (top right) and choose **Keys**, or go to [https://openrouter.ai/keys](https://openrouter.ai/keys).
-4. Click **Create Key**.
-5. Give the key a name (e.g. `untitled`), leave permissions as default, and create the key.
-6. Copy the key and store it somewhere safe (you may only see it once).
-
-**Step 2: Pick a free model**
-
-OpenRouter has many models; free ones use the `:free` suffix. Examples:
-
-- `google/gemma-3-4b-it:free` (default in untitled)
-- `meta-llama/llama-3.2-3b-instruct:free`
-
-Browse more at [OpenRouter – Free models](https://openrouter.ai/collections/free-models).
-
-**Step 3: Configure untitled**
-
-**Option A – `.env` (recommended)**
-
-In your workspace root, create or edit `.env` (copy from `.env.example` if needed) and set:
-
-```env
-UNTITLED_LLM_PROVIDER=openrouter
-UNTITLED_LLM_API_KEY=sk-or-v1-xxxxxxxxxxxx
-UNTITLED_OPENROUTER_MODEL=google/gemma-3-4b-it:free
-```
-
-Replace `sk-or-v1-xxxxxxxxxxxx` with your real OpenRouter API key. Use any free model ID you like for `UNTITLED_OPENROUTER_MODEL`.
-
-**Option B – VS Code/Cursor settings**
-
-1. Open Settings (Cmd+, / Ctrl+,).
-2. Search for `untitled`.
-3. Set **untitled: Llm Provider** to `openrouter`.
-4. Set **untitled: Llm Api Key** to your OpenRouter API key.
-5. Set **untitled: Open Router Model** to e.g. `google/gemma-3-4b-it:free`.
-
-**Step 4: Reload and use**
-
-Reload the window (Command Palette → “Developer: Reload Window”) if the extension was already running. Open a Python file, run **Explain file** or **Explain selection**, and summaries will use the free OpenRouter model.
-
-## Development
+### 1. Build
 
 ```bash
 npm install
-npm run compile
+cd packages/core && npm run build
+cd ../vscode-extension && npm install && npm run compile
 ```
 
-Then run the extension from VS Code/Cursor (F5 with "Run and Debug" for the Extension Development Host).
+### 2. Run the VS Code extension
 
-## Concepts (v1)
+- Open this repo in VS Code or Cursor.
+- Press `F5` (Run > Start Debugging) to launch Extension Development Host.
+- In the new window: open a project, select code, then **Cmd+Shift+E** (Mac) or **Ctrl+Shift+E** (Windows/Linux) to explain.
 
-- **Data structures:** list, dict, set, tuple, deque, defaultdict, Counter, OrderedDict
-- **Loops:** for, while, list/dict/set comprehensions, generators
-- **Libraries:** pathlib, requests, collections, itertools, os, json, re, dataclasses, typing
+### 3. Configure API key (default: Open Router, free)
 
-You can extend the taxonomy and add curated video IDs in `src/taxonomy/concepts.ts`.
+- **Open Router (default, free):** Set your API key via **Untitled: Set API Key** (stored in system keychain per PRD 6.2) or set `OPENROUTER_API_KEY` in your environment. Default model: `nvidia/nemotron-3-nano-30b-a3b:free`. You can change **Untitled: Open Router Model** to other free models (e.g. `meta-llama/llama-3.3-70b-instruct:free`, `stepfun/step-3.5-flash:free`).
+- **Anthropic:** Set **Untitled: API Provider** to `anthropic` and set your Anthropic API key.
+- Code is anonymized before sending in standard privacy mode.
+
+## Commands (VS Code)
+
+| Command | Shortcut | Description |
+|--------|----------|-------------|
+| **Untitled: Explain Selected Code** | `Cmd+Shift+E` / `Ctrl+Shift+E` | Explain selected code in plain English |
+| **Untitled: Explain Current File** | `Cmd+Shift+F` / `Ctrl+Shift+F` | Summarize the current file |
+| **Untitled: Add Annotation** | `Cmd+Shift+N` / `Ctrl+Shift+N` | Add your own note for the selection |
+| **Untitled: Search Annotations** | — | Search your annotations |
+| **Untitled: Index Workspace** | — | Index workspace for context |
+| **Untitled: Open Settings** | — | Open Untitled settings |
+
+## Supported languages
+
+Indexing and symbol extraction (for context-aware explanations) are supported for:
+
+- **JavaScript / TypeScript** — `.js`, `.ts`, `.jsx`, `.tsx`, `.mjs`, `.cjs` (functions, classes, imports)
+- **Python** — `.py` (functions, classes, imports)
+
+Other file types can still be explained; they just won’t get repo-map context from the indexer.
+
+## Features (from PRD)
+
+- **Context-aware explanations** — Uses a lightweight index (files, symbols, imports) to build a compact “repo map” and explain code in context.
+- **Persistent cache** — Explanations are keyed by content hash; cache hits avoid AI calls.
+- **Personal annotations** — Add notes and tags to reinforce learning.
+- **Privacy** — Standard mode anonymizes code before AI; strict mode is cache-only (no code sent).
+
+## Project layout
+
+```
+untitled/
+├── PRD.md                    # Product requirements
+├── packages/
+│   ├── core/                 # @untitled/core — indexer, cache, context, AI
+│   └── vscode-extension/    # VS Code / Cursor thin adapter
+└── README.md
+```
+
+## Development
+
+- **Core:** `packages/core` — TypeScript, Node 18+. Build: `npm run build`.
+- **Extension:** `packages/vscode-extension` — Depends on `@untitled/core` via workspace. Build core first, then `npm run compile`.
+
+## License
+
+Proprietary. See repository terms.

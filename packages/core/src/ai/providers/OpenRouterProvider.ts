@@ -1,0 +1,116 @@
+/**
+ * Open Router API provider - uses OpenAI-compatible chat completions.
+ * Supports free models (e.g. nvidia/nemotron-3-nano-30b-a3b:free).
+ * Docs: https://openrouter.ai/docs/api-reference/chat-completion
+ * PRD 6.2: Error messages never include raw body or secrets.
+ */
+
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+
+/** Default free model on Open Router (NVIDIA Nemotron 3 Nano 30B; PRD 6.2: no secrets in logs) */
+export const DEFAULT_OPENROUTER_FREE_MODEL = 'nvidia/nemotron-3-nano-30b-a3b:free';
+
+/** Fallback free model when primary returns 404 (model not configured in Gateway). */
+export const FALLBACK_OPENROUTER_FREE_MODEL = 'meta-llama/llama-3.3-70b-instruct:free';
+
+export interface OpenRouterProviderConfig {
+  apiKey: string;
+  model?: string;
+  maxTokens?: number;
+}
+
+export interface OpenRouterUsage {
+  input: number;
+  output: number;
+}
+
+/** Build user-facing error message from status and body; never include raw body or secrets (PRD 6.2). */
+function sanitizedError(status: number, bodyText: string, is404Hint?: boolean): string {
+  let message = `Open Router API error ${status}`;
+  try {
+    const parsed = JSON.parse(bodyText) as { error?: { message?: string } };
+    const errMsg = parsed?.error?.message;
+    if (typeof errMsg === 'string' && errMsg.trim()) {
+      message += `: ${errMsg.trim()}`;
+    }
+  } catch {
+    message += '. Check your model setting and connection.';
+    return message;
+  }
+  if (status === 404 || is404Hint) {
+    message += ' Try changing Untitled: Open Router Model in settings to a current free model (see openrouter.ai/collections/free-models).';
+  }
+  return message;
+}
+
+export class OpenRouterProvider {
+  private readonly apiKey: string;
+  private readonly model: string;
+  private readonly maxTokens: number;
+
+  constructor(config: OpenRouterProviderConfig) {
+    this.apiKey = config.apiKey;
+    this.model = config.model ?? DEFAULT_OPENROUTER_FREE_MODEL;
+    this.maxTokens = config.maxTokens ?? 1024;
+  }
+
+  private async requestWithModel(
+    model: string,
+    systemPrompt: string,
+    userPrompt: string
+  ): Promise<Response> {
+    return fetch(OPENROUTER_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://github.com/untitled',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: this.maxTokens,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+      }),
+    });
+  }
+
+  private async parseSuccessResponse(response: Response): Promise<{ text: string; usage?: OpenRouterUsage }> {
+    const data = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
+      usage?: { prompt_tokens?: number; completion_tokens?: number };
+    };
+    const content = data.choices?.[0]?.message?.content ?? '';
+    const usage = data.usage
+      ? { input: data.usage.prompt_tokens ?? 0, output: data.usage.completion_tokens ?? 0 }
+      : undefined;
+    return { text: content.trim(), usage };
+  }
+
+  async explain(systemPrompt: string, userPrompt: string): Promise<{ text: string; usage?: OpenRouterUsage }> {
+    let response = await this.requestWithModel(this.model, systemPrompt, userPrompt);
+
+    if (!response.ok) {
+      const errText = await response.text();
+      if (response.status === 404) {
+        const fallbackResponse = await this.requestWithModel(
+          FALLBACK_OPENROUTER_FREE_MODEL,
+          systemPrompt,
+          userPrompt
+        );
+        if (fallbackResponse.ok) {
+          return this.parseSuccessResponse(fallbackResponse);
+        }
+        const fallbackErrText = await fallbackResponse.text();
+        throw new Error(
+          sanitizedError(fallbackResponse.status, fallbackErrText, true)
+        );
+      }
+      throw new Error(sanitizedError(response.status, errText));
+    }
+
+    return this.parseSuccessResponse(response);
+  }
+}
