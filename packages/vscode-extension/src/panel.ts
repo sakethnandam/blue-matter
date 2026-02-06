@@ -1,9 +1,12 @@
 /**
  * Explanation panel - Webview that shows AI explanation and user annotations
+ * PRD 6.2: output sanitization + CSP; only e.text is markdown-rendered; file path and code stay escaped.
  */
 
 import * as vscode from 'vscode';
 import type { Explanation } from '@untitled/core';
+import { markdownToSafeHtml } from './explanationHtml';
+import { getPanelStyles } from './theme';
 
 let panelRef: ExplanationPanel | null = null;
 
@@ -28,7 +31,7 @@ export class ExplanationPanel {
         'untitledExplanations',
         'Untitled - Explanations',
         vscode.ViewColumn.Beside,
-        { enableScripts: true, retainContextWhenHidden: true }
+        { enableScripts: false, retainContextWhenHidden: true }
       );
       this.panel.onDidDispose(() => {
         this.panel = null;
@@ -52,42 +55,32 @@ export class ExplanationPanel {
     if (!this.panel || !this.currentExplanation) return;
     const e = this.currentExplanation;
     const codeEscaped = escapeHtml(this.currentCode);
-    const textEscaped = escapeHtml(e.text);
-    const summaryEscaped = escapeHtml(e.summary);
     const fileEscaped = escapeHtml(this.currentFilePath);
+    const explanationBodyHtml = markdownToSafeHtml(e.text);
+    const iconUri = this.panel.webview.asWebviewUri(
+      vscode.Uri.joinPath(this.context.extensionUri, 'assets', 'untitled-icon.png')
+    );
+    const csp = "default-src 'none'; style-src 'unsafe-inline'; font-src 'self' vscode-resource: https:; img-src 'self' data: vscode-resource: https:; script-src 'none';";
     this.panel.title = 'Untitled - Explanation';
     this.panel.webview.html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="${csp.replace(/"/g, '&quot;')}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Untitled</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      font-family: var(--vscode-font-family), -apple-system, sans-serif;
-      font-size: 13px;
-      color: var(--vscode-foreground);
-      background: var(--vscode-editor-background);
-      padding: 16px;
-      margin: 0;
-      line-height: 1.5;
-    }
-    h2 { font-size: 14px; margin: 0 0 8px 0; color: var(--vscode-textLink-foreground); }
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-bottom: 8px; }
-    .badge-cache { background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
-    .badge-ai { background: #3b82f6; color: white; }
-    .code-block { background: var(--vscode-textCodeBlock-background); padding: 12px; border-radius: 6px; overflow-x: auto; font-family: var(--vscode-editor-font-family); font-size: 12px; margin: 8px 0; white-space: pre-wrap; }
-    .explanation { margin: 12px 0; }
-    .file-path { font-size: 11px; color: var(--vscode-descriptionForeground); margin-bottom: 8px; }
-  </style>
+  <style>${getPanelStyles()}</style>
 </head>
 <body>
+  <div class="panel-header">
+    <img src="${iconUri.toString()}" alt="Untitled" />
+    <span class="title">UNTITLED</span>
+  </div>
   <div class="file-path">${fileEscaped}</div>
   <span class="badge badge-${e.source === 'cache' ? 'cache' : 'ai'}">${e.source === 'cache' ? 'From cache' : 'AI explanation'}</span>
-  <h2>Explanation</h2>
-  <div class="explanation">${textEscaped.replace(/\n/g, '<br>')}</div>
-  <h2>Code</h2>
+  <h2 class="section-heading">Explanation</h2>
+  <div class="explanation">${explanationBodyHtml}</div>
+  <h2 class="section-heading">Code</h2>
   <pre class="code-block">${codeEscaped}</pre>
 </body>
 </html>`;

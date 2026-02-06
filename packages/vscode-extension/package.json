@@ -126,7 +126,8 @@
     "package": "vsce package --no-dependencies"
   },
   "dependencies": {
-    "@untitled/core": "file:../core"
+    "@untitled/core": "file:../core",
+    "marked": "^15.0.0"
   },
   "devDependencies": {
     "@types/vscode": "^1.80.0",
