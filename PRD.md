@@ -1,5 +1,5 @@
 # Untitled: Comprehensive Product Requirements Document
-## "Grammarly for Code" - Platform-Agnostic Code Intelligence System
+## Platform-Agnostic Code Intelligence System
 
 **Version:** 1.0  
 **Last Updated:** February 2, 2026  

@@ -13,6 +13,16 @@ const ALLOWED_TAGS = new Set([
 /** Schemes we allow for <a href> (strip javascript:, data:, etc.). */
 const SAFE_LINK_SCHEMES = new Set(['https:', 'http:']);
 
+/** Escape a string for safe use inside a double-quoted HTML attribute (XSS defense-in-depth). */
+function escapeAttrValue(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/`/g, '&#96;');
+}
+
 /**
  * Decode HTML entities in a string so we can validate the real value the browser will use.
  * Prevents bypasses like href="&#106;avascript:alert(1)" where the browser decodes to javascript:.
@@ -55,7 +65,7 @@ function sanitizeHtml(html: string): string {
       } catch {
         href = '#';
       }
-      return `<a href="${href.replace(/"/g, '&quot;')}">`;
+      return `<a href="${escapeAttrValue(href)}">`;
     }
     return `<${name}>`;
   });
@@ -72,6 +82,7 @@ export function markdownToSafeHtml(text: string): string {
     async: false,
     gfm: true,
     breaks: true,
-  }) as string;
-  return sanitizeHtml(raw ?? '');
+  });
+  const html = typeof raw === 'string' ? raw : '';
+  return sanitizeHtml(html);
 }

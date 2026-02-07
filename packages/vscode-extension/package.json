@@ -39,6 +39,10 @@
         "title": "Untitled: Open Explanation Panel"
       },
       {
+        "command": "untitled.showDashboard",
+        "title": "Untitled: Show Dashboard"
+      },
+      {
         "command": "untitled.indexWorkspace",
         "title": "Untitled: Index Workspace"
       },
@@ -127,7 +131,7 @@
   },
   "dependencies": {
     "@untitled/core": "file:../core",
-    "marked": "^15.0.0"
+    "marked": "15.0.12"
   },
   "devDependencies": {
     "@types/vscode": "^1.80.0",

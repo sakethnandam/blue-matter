@@ -4,6 +4,9 @@
  * PRD 6.2: theme is static data only; no user/AI content. CSP and sanitization unchanged.
  */
 
+/** Editable motto shown on the dashboard. Escape when injecting into HTML. */
+export const DASHBOARD_MOTTO = 'Your code is untitled until you master it.';
+
 export const theme = {
   colors: {
     background: '#282828',
@@ -19,6 +22,7 @@ export const theme = {
     fontSizeSmall: '11px',
     fontSizeCode: '12px',
     fontSizeHeading: '14px',
+    fontSizeTitle: '18px',
     lineHeightBody: '1.6',
     lineHeightExplanation: '1.65',
     letterSpacingTitle: '0.02em',
@@ -26,6 +30,8 @@ export const theme = {
   spacing: {
     paddingBody: '16px',
     gapHeader: '10px',
+    headerIconSize: '36px',
+    headerGearSize: '20px',
     marginBottomHeader: '12px',
     marginBottomFile: '8px',
     marginBottomBadge: '8px',
@@ -65,18 +71,40 @@ export function getPanelStyles(): string {
     .panel-header {
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: ${t.spacing.gapHeader};
       margin-bottom: ${t.spacing.marginBottomHeader};
     }
+    .panel-header-brand {
+      display: flex;
+      align-items: center;
+      gap: ${t.spacing.gapHeader};
+      color: inherit;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .panel-header-brand:hover {
+      opacity: 0.9;
+    }
     .panel-header img {
-      width: 28px;
-      height: 28px;
+      width: ${t.spacing.headerIconSize};
+      height: ${t.spacing.headerIconSize};
     }
     .panel-header .title {
       font-weight: bold;
-      font-size: ${t.typography.fontSizeHeading};
+      font-size: ${t.typography.fontSizeTitle};
       color: ${t.colors.textOnAccent};
       letter-spacing: ${t.typography.letterSpacingTitle};
+    }
+    .panel-header-gear {
+      display: block;
+      width: ${t.spacing.headerGearSize};
+      height: ${t.spacing.headerGearSize};
+      color: ${t.colors.textMuted};
+      cursor: pointer;
+    }
+    .panel-header-gear:hover {
+      color: ${t.colors.text};
     }
     .file-path {
       font-size: ${t.typography.fontSizeSmall};
@@ -156,6 +184,50 @@ export function getPanelStyles(): string {
       margin: ${t.spacing.marginExplanationBlock};
       white-space: pre-wrap;
       color: ${t.colors.text};
+    }
+    .dashboard-body {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .dashboard-body img {
+      width: ${t.spacing.headerIconSize};
+      height: ${t.spacing.headerIconSize};
+      margin-bottom: ${t.spacing.gapHeader};
+    }
+    .dashboard-body .title {
+      font-weight: bold;
+      font-size: ${t.typography.fontSizeTitle};
+      color: ${t.colors.textOnAccent};
+      letter-spacing: ${t.typography.letterSpacingTitle};
+      margin-bottom: ${t.spacing.gapHeader};
+    }
+    .dashboard-motto {
+      font-size: ${t.typography.fontSizeBase};
+      color: ${t.colors.textMuted};
+      margin: ${t.spacing.marginExplanation} 0;
+    }
+    .dashboard-actions {
+      display: flex;
+      flex-direction: column;
+      gap: ${t.spacing.gapHeader};
+      margin-top: ${t.spacing.marginBottomHeader};
+    }
+    .btn-primary {
+      display: inline-block;
+      padding: 10px 16px;
+      background: ${t.colors.accent};
+      color: ${t.colors.textOnAccent};
+      font-family: ${t.typography.fontFamily};
+      font-size: ${t.typography.fontSizeBase};
+      font-weight: 600;
+      text-align: center;
+      text-decoration: none;
+      border-radius: ${t.radius.badge};
+      cursor: pointer;
+    }
+    .btn-primary:hover {
+      opacity: 0.9;
     }
   `.trim();
 }
