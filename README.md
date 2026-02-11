@@ -1,4 +1,4 @@
-# Untitled — Grammarly for Code
+# Untitled – Your code is not yours until you understand it.
 
 **Untitled** is a platform-level code intelligence system: a context-aware explanation engine that works across editors and IDEs. It indexes your codebase, caches explanations by structural signature, and calls AI only when needed—so you learn as you build, without repeated prompting.
 
