@@ -140,7 +140,10 @@ export function activate(context: vscode.ExtensionContext): void {
             return;
           }
         } else {
-          const editor = vscode.window.activeTextEditor;
+          let editor = vscode.window.activeTextEditor;
+          if (!editor || editor.selection.isEmpty) {
+            editor = vscode.window.visibleTextEditors.find((e) => !e.selection.isEmpty);
+          }
           if (!editor) {
             vscode.window.showWarningMessage('Untitled: Open a file and select code to explain.');
             return;
@@ -243,6 +246,13 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('untitled.openPanel', () => {
       getPanel(context).reveal();
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('untitled.showDashboard', () => {
+      getPanel(context).reveal();
+      getPanel(context).showDashboard();
     })
   );
 

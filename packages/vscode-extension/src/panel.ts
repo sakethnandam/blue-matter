@@ -1,9 +1,12 @@
 /**
  * Explanation panel - Webview that shows AI explanation and user annotations
+ * PRD 6.2: output sanitization + CSP; only e.text is markdown-rendered; file path and code stay escaped.
  */
 
 import * as vscode from 'vscode';
 import type { Explanation } from '@untitled/core';
+import { markdownToSafeHtml } from './explanationHtml';
+import { DASHBOARD_MOTTO, getPanelStyles } from './theme';
 
 let panelRef: ExplanationPanel | null = null;
 
@@ -28,7 +31,7 @@ export class ExplanationPanel {
         'untitledExplanations',
         'Untitled - Explanations',
         vscode.ViewColumn.Beside,
-        { enableScripts: true, retainContextWhenHidden: true }
+        { enableScripts: false, retainContextWhenHidden: true, enableCommandUris: true }
       );
       this.panel.onDidDispose(() => {
         this.panel = null;
@@ -37,7 +40,41 @@ export class ExplanationPanel {
     this.panel.reveal();
     if (this.currentExplanation) {
       this.updateHtml();
+    } else {
+      this.showDashboard();
     }
+  }
+
+  /** Shows the dashboard view (motto and action buttons). */
+  showDashboard(): void {
+    if (!this.panel) return;
+    const iconUri = this.panel.webview.asWebviewUri(
+      vscode.Uri.joinPath(this.context.extensionUri, 'assets', 'untitled-icon.png')
+    );
+    const headerHtml = buildHeaderHtml(iconUri.toString());
+    const mottoEscaped = escapeHtml(DASHBOARD_MOTTO);
+    const csp = "default-src 'none'; style-src 'unsafe-inline'; font-src 'self' vscode-resource: https:; img-src 'self' data: vscode-resource: https:; script-src 'none';";
+    this.panel.title = 'Untitled';
+    this.panel.webview.html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="${csp.replace(/"/g, '&quot;')}">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Untitled</title>
+  <style>${getPanelStyles()}</style>
+</head>
+<body>
+  ${headerHtml}
+  <div class="dashboard-body">
+    <p class="dashboard-motto">${mottoEscaped}</p>
+    <div class="dashboard-actions">
+      <a href="command:untitled.explainFile" class="btn-primary">EXPLAIN FILE</a>
+      <a href="command:untitled.explainCode" class="btn-primary">EXPLAIN SELECTION</a>
+    </div>
+  </div>
+</body>
+</html>`;
   }
 
   setExplanation(explanation: Explanation, code: string, filePath: string): void {
@@ -52,46 +89,43 @@ export class ExplanationPanel {
     if (!this.panel || !this.currentExplanation) return;
     const e = this.currentExplanation;
     const codeEscaped = escapeHtml(this.currentCode);
-    const textEscaped = escapeHtml(e.text);
-    const summaryEscaped = escapeHtml(e.summary);
     const fileEscaped = escapeHtml(this.currentFilePath);
+    const explanationBodyHtml = markdownToSafeHtml(typeof e.text === 'string' ? e.text : '');
+    const iconUri = this.panel.webview.asWebviewUri(
+      vscode.Uri.joinPath(this.context.extensionUri, 'assets', 'untitled-icon.png')
+    );
+    const csp = "default-src 'none'; style-src 'unsafe-inline'; font-src 'self' vscode-resource: https:; img-src 'self' data: vscode-resource: https:; script-src 'none';";
     this.panel.title = 'Untitled - Explanation';
     this.panel.webview.html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="${csp.replace(/"/g, '&quot;')}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Untitled</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      font-family: var(--vscode-font-family), -apple-system, sans-serif;
-      font-size: 13px;
-      color: var(--vscode-foreground);
-      background: var(--vscode-editor-background);
-      padding: 16px;
-      margin: 0;
-      line-height: 1.5;
-    }
-    h2 { font-size: 14px; margin: 0 0 8px 0; color: var(--vscode-textLink-foreground); }
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; margin-bottom: 8px; }
-    .badge-cache { background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
-    .badge-ai { background: #3b82f6; color: white; }
-    .code-block { background: var(--vscode-textCodeBlock-background); padding: 12px; border-radius: 6px; overflow-x: auto; font-family: var(--vscode-editor-font-family); font-size: 12px; margin: 8px 0; white-space: pre-wrap; }
-    .explanation { margin: 12px 0; }
-    .file-path { font-size: 11px; color: var(--vscode-descriptionForeground); margin-bottom: 8px; }
-  </style>
+  <style>${getPanelStyles()}</style>
 </head>
 <body>
+  ${buildHeaderHtml(iconUri.toString())}
   <div class="file-path">${fileEscaped}</div>
   <span class="badge badge-${e.source === 'cache' ? 'cache' : 'ai'}">${e.source === 'cache' ? 'From cache' : 'AI explanation'}</span>
-  <h2>Explanation</h2>
-  <div class="explanation">${textEscaped.replace(/\n/g, '<br>')}</div>
-  <h2>Code</h2>
+  <h2 class="section-heading">Explanation</h2>
+  <div class="explanation">${explanationBodyHtml}</div>
+  <h2 class="section-heading">Code</h2>
   <pre class="code-block">${codeEscaped}</pre>
 </body>
 </html>`;
   }
+}
+
+/** Shared header fragment: brand link (logo + title) and settings gear link. */
+function buildHeaderHtml(iconUri: string): string {
+  const gearSvg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97 0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1 0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z"/></svg>';
+  return `<div class="panel-header">
+    <a href="command:untitled.showDashboard" class="panel-header-brand"><img src="${escapeHtml(iconUri)}" alt="Untitled" /><span class="title">UNTITLED</span></a>
+    <a href="command:untitled.settings" class="panel-header-gear" aria-label="Settings">${gearSvg}</a>
+  </div>`;
 }
 
 function escapeHtml(s: string): string {
