@@ -56,8 +56,10 @@ function sanitizeHtml(html: string): string {
     if (full.startsWith('</')) return `</${name}>`;
     // Opening tag: allow only safe attributes per tag
     if (name === 'a') {
-      const hrefMatch = full.match(/href\s*=\s*"([^"]*)"|href\s*=\s*'([^']*)'/i);
-      let href = hrefMatch ? (hrefMatch[1] ?? hrefMatch[2] ?? '').trim() : '';
+      // Match quoted ("...", '...') and unquoted (value until space or >) so unquoted href=javascript:... is validated
+      const hrefMatch = full.match(/href\s*=\s*"([^"]*)"|href\s*=\s*'([^']*)'|href\s*=\s*([^\s>]+)/i);
+      let href = hrefMatch ? (hrefMatch[1] ?? hrefMatch[2] ?? hrefMatch[3] ?? '').trim() : '';
+      if (!href) href = '#';
       href = decodeHtmlEntities(href);
       try {
         const url = new URL(href, 'https://example.com');
