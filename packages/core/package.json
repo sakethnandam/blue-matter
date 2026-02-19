@@ -14,15 +14,17 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test": "npx jest",
+    "test:coverage": "npx jest --coverage",
+    "test:security": "npx jest tests/security",
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.32.1",
     "fast-glob": "^3.3.2",
     "sql.js": "^1.11.0"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.12",
     "@types/crypto-js": "^4.2.2",
     "@types/node": "^22.10.1",
     "@types/sql.js": "^1.4.9",

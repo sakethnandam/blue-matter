@@ -4,6 +4,7 @@
 
 const SENSITIVE_PATTERNS = [
   /sk-[a-zA-Z0-9]{40,}/g,
+  /sk-or-v1-[a-zA-Z0-9-_]{40,}/g,
   /sk-ant-[a-zA-Z0-9-_]{40,}/g,
   /Bearer\s+[a-zA-Z0-9._-]+/g,
   /password["\s:=]+[^\s"]+/gi,
