@@ -29,7 +29,7 @@ export interface ExplanationMetadata {
   language: string;
   filePath?: string;
   lineRange?: [number, number];
-  aiProvider?: 'anthropic' | 'openai' | 'openrouter' | 'local';
+  aiProvider?: 'openrouter' | 'local';
   tokenCount?: number;
   cost?: number;
   userFeedback?: 'positive' | 'negative';

@@ -30,7 +30,22 @@ export function registerExplainCodeLensProvider(): vscode.Disposable {
       if (!SUPPORTED_LANGUAGES.includes(document.languageId)) {
         return [];
       }
-      const editor = vscode.window.activeTextEditor;
+      let editor = vscode.window.activeTextEditor;
+      if (!editor || editor.document !== document) {
+        editor = undefined;
+        const notebookEditor = vscode.window.activeNotebookEditor;
+        if (notebookEditor) {
+          const cell = notebookEditor.notebook
+            .getCells()
+            .find((c) => c.document === document);
+          if (cell) {
+            const cellEditor = vscode.window.visibleTextEditors.find(
+              (e) => e.document === document
+            );
+            editor = cellEditor;
+          }
+        }
+      }
       if (!editor || editor.document !== document) {
         return [];
       }
@@ -80,9 +95,15 @@ export function registerExplainCodeLensProvider(): vscode.Disposable {
     }
   );
 
+  const notebookSelectionDisposable =
+    vscode.window.onDidChangeNotebookEditorSelection(() => {
+      fireExplainCodeLensChange();
+    });
+
   return vscode.Disposable.from(
     lensDisposable,
     selectionDisposable,
-    activeEditorDisposable
+    activeEditorDisposable,
+    notebookSelectionDisposable
   );
 }

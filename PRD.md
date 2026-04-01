@@ -948,8 +948,7 @@ Handles user authentication and JWT token generation
 │   │   ├── PromptBuilder.ts             # Build optimal prompts
 │   │   ├── providers/
 │   │   │   ├── Provider.interface.ts    # LLM provider contract
-│   │   │   ├── AnthropicProvider.ts     # Claude API
-│   │   │   ├── OpenAIProvider.ts        # GPT-4 API
+│   │   │   ├── OpenRouterProvider.ts    # OpenRouter API
 │   │   │   └── LocalProvider.ts         # Local models
 │   │   ├── RateLimiter.ts               # Prevent abuse
 │   │   └── CostTracker.ts               # Track API costs
@@ -1026,7 +1025,7 @@ export interface ExplanationMetadata {
   language: string;  // 'javascript', 'python', etc.
   filePath?: string;
   lineRange?: [number, number];
-  aiProvider?: 'anthropic' | 'openai' | 'local';
+  aiProvider?: 'openrouter' | 'local';
   tokenCount?: number;
   cost?: number;  // USD
   userFeedback?: 'positive' | 'negative';
@@ -1129,7 +1128,7 @@ export interface UntitledConfig {
   userId: string;
   storagePath: string;
   apiKey?: string;
-  aiProvider: 'anthropic' | 'openai' | 'local';
+  aiProvider: 'openrouter' | 'local';
   cacheStrategy: 'aggressive' | 'balanced' | 'minimal';
   privacyMode: 'standard' | 'strict';  // strict = never send code to AI
   rateLimits: RateLimits;
@@ -1606,8 +1605,7 @@ throw new Error(`API call failed with key ${apiKey}`);
 ```typescript
 class SecureLogger {
   private sensitivePatterns = [
-    /sk-[a-zA-Z0-9]{48}/,  // OpenAI format
-    /sk-ant-[a-zA-Z0-9-]{95}/,  // Anthropic format
+    /sk-or-v1-[a-zA-Z0-9-_]+/,  // OpenRouter format
     /Bearer [a-zA-Z0-9._-]+/,  // JWT tokens
     /password["\s:=]+[^\s"]+/i
   ];
@@ -2329,12 +2327,11 @@ function validateEmail(email) {
 │ General                                                     │
 │ ┌─────────────────────────────────────────────────────────┐│
 │ │ API Provider                                            ││
-│ │ ◉ Anthropic (Claude)                                    ││
-│ │ ◯ OpenAI (GPT-4)                                        ││
+│ │ ◉ OpenRouter                                            ││
 │ │ ◯ Local Model                                           ││
 │ │                                                         ││
 │ │ API Key                                                 ││
-│ │ [sk-ant-●●●●●●●●●●●●]  [Change]                         ││
+│ │ [sk-or-v1-●●●●●●●●●●●●]  [Change]                       ││
 │ └─────────────────────────────────────────────────────────┘│
 │                                                             │
 │ Privacy                                                     │
@@ -2393,14 +2390,14 @@ Welcome message appears in notification
 │                                             │
 │ To get started, connect your AI provider:  │
 │                                             │
-│ ◉ Anthropic (Claude) - Recommended          │
-│ ◯ OpenAI (GPT-4)                            │
+│ ◉ OpenRouter - Recommended                  │
+│ ◯ Local Model                               │
 │                                             │
 │ Enter your API key:                         │
 │ [_________________________________]          │
 │                                             │
 │ Don't have an API key?                      │
-│ [Get Anthropic API key →]                   │
+│ [Get OpenRouter API key →]                  │
 │                                             │
 │ Your key is stored securely in your         │
 │ system keychain and never shared.           │
@@ -2939,7 +2936,7 @@ Progress tracked (e.g., "5/12 guides completed")
     "vscode": "^1.80.0"
   },
   "categories": ["Other", "Education", "Machine Learning"],
-  "keywords": ["ai", "code-explanation", "learning", "copilot", "claude"],
+  "keywords": ["ai", "code-explanation", "learning", "copilot"],
   "activationEvents": [
     "onStartupFinished"
   ],
@@ -3022,8 +3019,8 @@ Progress tracked (e.g., "5/12 guides completed")
       "properties": {
         "untitled.aiProvider": {
           "type": "string",
-          "enum": ["anthropic", "openai", "local"],
-          "default": "anthropic",
+          "enum": ["openrouter", "local"],
+          "default": "openrouter",
           "description": "AI provider for explanations"
         },
         "untitled.privacyMode": {
@@ -3719,10 +3716,17 @@ class StreamingAI {
     code: string,
     onChunk: (chunk: string) => void
   ): Promise<Explanation> {
-    const stream = await this.anthropic.messages.stream({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      messages: [{ role: 'user', content: this.buildPrompt(code) }]
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'nvidia/nemotron-3-nano-30b-a3b:free',
+        messages: [{ role: 'user', content: this.buildPrompt(code) }],
+        max_tokens: 1000
+      })
     });
     
     let fullText = '';
@@ -4291,7 +4295,6 @@ showExplanationPanel(config.position);
    - Chrome Web Store: Take-home after Google's 5% fee
 
 3. **Partnership Revenue (5% of revenue)**
-   - Anthropic/OpenAI referral fees
    - IDE partnerships (Cursor, Replit)
    - Educational partnerships (bootcamps, universities)
 
@@ -4401,7 +4404,7 @@ showExplanationPanel(config.position);
 - [ ] Core SDK architecture finalized
 - [ ] Code indexer (JavaScript/TypeScript)
 - [ ] Explanation cache with SQLite
-- [ ] AI orchestrator (Anthropic API)
+- [ ] AI orchestrator (OpenRouter API)
 - [ ] Basic security (input sanitization, path validation)
 - [ ] Unit tests (80% coverage)
 - [ ] Documentation (API reference)
@@ -4712,7 +4715,7 @@ Low Impact, High Effort (DO LAST):
 - **Runtime**: Node.js 18+
 - **Parser**: Babel (JS/TS), tree-sitter (Python, Go)
 - **Database**: SQLite 3 (better-sqlite3)
-- **AI**: Anthropic Claude API (primary), OpenAI API (fallback)
+- **AI**: OpenRouter API
 - **Testing**: Jest, Testing Library
 - **Build**: Rollup, esbuild
 

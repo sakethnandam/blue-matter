@@ -3,6 +3,7 @@
  */
 
 import * as vscode from 'vscode';
+import * as fs from 'node:fs';
 import * as path from 'path';
 import * as os from 'os';
 import { getPanel } from './panel';
@@ -97,13 +98,30 @@ export function activate(context: vscode.ExtensionContext): void {
             return;
           }
           const uri = vscode.Uri.parse(uriString);
-          // Security: only allow file or untitled schemes (no http/https/git/etc.)
-          const allowedSchemes = ['file', 'untitled'];
+          // Security: only allow file, untitled, or vscode-notebook-cell schemes (no http/https/git/etc.)
+          const allowedSchemes = ['file', 'untitled', 'vscode-notebook-cell'];
           if (!allowedSchemes.includes(uri.scheme)) {
             vscode.window.showWarningMessage('Untitled: Document is not in the workspace.');
             return;
           }
-          const inWorkspace = vscode.workspace.getWorkspaceFolder(uri);
+          // For notebook cell URIs: getWorkspaceFolder returns undefined. Use the notebook document's URI for validation.
+          let uriForWorkspaceCheck = uri;
+          if (uri.scheme === 'vscode-notebook-cell') {
+            const uriNorm = uri.toString();
+            const notebook = vscode.workspace.notebookDocuments.find((nb) =>
+              nb.getCells().some(
+                (cell) =>
+                  cell.document.uri.toString() === uriNorm ||
+                  cell.document.uri.toString() === uriString
+              )
+            );
+            if (notebook) {
+              uriForWorkspaceCheck = notebook.uri;
+            } else {
+              uriForWorkspaceCheck = uri.with({ scheme: 'file', path: uri.path });
+            }
+          }
+          const inWorkspace = vscode.workspace.getWorkspaceFolder(uriForWorkspaceCheck);
           // Untitled: getWorkspaceFolder often returns undefined; allow. File: allow; we verify path after open when getWorkspaceFolder was undefined (path fallback).
           if (!isValidRangeArg(rangeArg)) {
             vscode.window.showWarningMessage('Untitled: Invalid selection.');
@@ -111,16 +129,48 @@ export function activate(context: vscode.ExtensionContext): void {
           }
           try {
             const document = await vscode.workspace.openTextDocument(uri);
-            // Security: for file scheme with workspace open, ensure path is under a workspace folder (fallback when getWorkspaceFolder failed)
+            // Re-resolve notebook from opened document (reference equality is more reliable than URI string).
             if (
-              uri.scheme === 'file' &&
-              vscode.workspace.workspaceFolders?.length &&
-              !inWorkspace
+              uri.scheme === 'vscode-notebook-cell' &&
+              uriForWorkspaceCheck.scheme !== 'untitled'
             ) {
-              const docPath = path.normalize(document.uri.fsPath);
+              const notebookByRef = vscode.workspace.notebookDocuments.find((nb) =>
+                nb.getCells().some((cell) => cell.document === document)
+              );
+              if (notebookByRef) {
+                uriForWorkspaceCheck = notebookByRef.uri;
+              }
+            }
+            // For untitled notebooks/cells: allow (same as untitled scheme for regular docs).
+            const isUntitledNotebook =
+              uri.scheme === 'vscode-notebook-cell' && uriForWorkspaceCheck.scheme === 'untitled';
+            const inWorkspaceAfterResolve = vscode.workspace.getWorkspaceFolder(uriForWorkspaceCheck);
+            // Security: for file or vscode-notebook-cell (file scheme) with workspace open, ensure path is under a workspace folder
+            if (
+              !isUntitledNotebook &&
+              (uri.scheme === 'file' || uri.scheme === 'vscode-notebook-cell') &&
+              vscode.workspace.workspaceFolders?.length &&
+              !inWorkspaceAfterResolve
+            ) {
+              const rawPath =
+                uriForWorkspaceCheck.scheme === 'file'
+                  ? uriForWorkspaceCheck.fsPath
+                  : document.uri.fsPath ||
+                    (uri.scheme === 'vscode-notebook-cell' ? uri.with({ scheme: 'file', path: uri.path }).fsPath : '');
+              if (!rawPath?.trim()) {
+                vscode.window.showWarningMessage('Untitled: Document is not in the workspace.');
+                return;
+              }
+              const docPath = path.normalize(rawPath);
               const underFolder = vscode.workspace.workspaceFolders.some((folder) => {
                 const root = path.normalize(folder.uri.fsPath);
-                return docPath === root || docPath.startsWith(root + path.sep);
+                try {
+                  const docReal = fs.realpathSync(docPath);
+                  const rootReal = fs.realpathSync(root);
+                  return docReal === rootReal || docReal.startsWith(rootReal + path.sep);
+                } catch {
+                  return docPath === root || docPath.startsWith(root + path.sep);
+                }
               });
               if (!underFolder) {
                 vscode.window.showWarningMessage('Untitled: Document is not in the workspace.');
@@ -133,7 +183,10 @@ export function activate(context: vscode.ExtensionContext): void {
               return;
             }
             text = document.getText(range);
-            filePath = document.uri.fsPath;
+            filePath =
+              uri.scheme === 'vscode-notebook-cell' && uriForWorkspaceCheck.scheme === 'file'
+                ? uriForWorkspaceCheck.fsPath
+                : document.uri.fsPath;
             language = document.languageId;
           } catch {
             vscode.window.showWarningMessage('Untitled: Could not open document.');
@@ -288,7 +341,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const ok = await promptForApiKey(context);
       if (!ok) {
         vscode.window.showInformationMessage(
-          "Untitled: You can set your API key later with 'Untitled: Set API Key' or set OPENROUTER_API_KEY / ANTHROPIC_API_KEY."
+          "Untitled: You can set your API key later with 'Untitled: Set API Key' or set OPENROUTER_API_KEY."
         );
       }
     })

@@ -19,12 +19,10 @@ const DEBUG_LOG = (loc: string, msg: string, data?: Record<string, unknown>) => 
 let coreInstance: import('@untitled/core').UntitledCore | null = null;
 let coreConfig: { workspaceRoot: string; storagePath: string; userId: string } | null = null;
 
-/** Validates API key format (Anthropic, Open Router, or generic sk-). Never log the key. */
+/** Validates API key format (Open Router or generic sk-). Never log the key. */
 function isValidApiKeyFormat(key: string): boolean {
   const trimmed = key.trim();
   if (!trimmed || trimmed.length < 20) return false;
-  // Anthropic: sk-ant-...
-  if (/^sk-ant-[a-zA-Z0-9-]{40,}$/.test(trimmed)) return true;
   // Open Router: sk-or-v1-...
   if (/^sk-or-v1-[a-zA-Z0-9-_]+$/.test(trimmed)) return true;
   // Generic sk- with sufficient length
@@ -62,10 +60,7 @@ async function resolveApiKey(context: vscode.ExtensionContext): Promise<string> 
     );
   }
 
-  const fromEnv =
-    provider === 'openrouter'
-      ? process.env.OPENROUTER_API_KEY?.trim()
-      : process.env.ANTHROPIC_API_KEY?.trim();
+  const fromEnv = process.env.OPENROUTER_API_KEY?.trim();
   return fromEnv || '';
 }
 
@@ -75,10 +70,7 @@ export async function hasStoredApiKey(context: vscode.ExtensionContext): Promise
   const provider = config.get<string>('apiProvider') || 'openrouter';
   const fromSecrets = await context.secrets.get(UNTITLED_API_KEY_SECRET);
   if (fromSecrets && isValidApiKeyFormat(fromSecrets)) return true;
-  const fromEnv =
-    provider === 'openrouter'
-      ? process.env.OPENROUTER_API_KEY?.trim()
-      : process.env.ANTHROPIC_API_KEY?.trim();
+  const fromEnv = process.env.OPENROUTER_API_KEY?.trim();
   return !!fromEnv;
 }
 
@@ -86,23 +78,18 @@ export async function hasStoredApiKey(context: vscode.ExtensionContext): Promise
 export async function promptForApiKey(context: vscode.ExtensionContext): Promise<boolean> {
   const config = vscode.workspace.getConfiguration('untitled');
   const provider = config.get<string>('apiProvider') || 'openrouter';
-  const providerLabel =
-    provider === 'openrouter'
-      ? 'Open Router (free at https://openrouter.ai/keys)'
-      : provider === 'anthropic'
-        ? 'Anthropic'
-        : 'AI provider';
+  const providerLabel = 'Open Router (free at https://openrouter.ai/keys)';
   const key = await vscode.window.showInputBox({
     title: 'Untitled: API Key',
     prompt: `Enter your ${providerLabel} API key. Your key is stored in your system keychain and only used for code explanations.`,
-    placeHolder: provider === 'openrouter' ? 'sk-or-v1-...' : 'sk-ant-...',
+    placeHolder: 'sk-or-v1-...',
     password: true,
     ignoreFocusOut: true,
     validateInput: (value) => {
       const trimmed = value?.trim() ?? '';
       if (!trimmed) return 'Please enter an API key.';
       if (!isValidApiKeyFormat(trimmed))
-        return 'Invalid key format. Use a valid API key (e.g. sk-ant-... or sk-or-v1-...).';
+        return 'Invalid key format. Use a valid API key (e.g. sk-or-v1-...).';
       return null;
     },
   });
@@ -159,7 +146,7 @@ export async function getCore(
     const configured = await ensureApiKey(context);
     if (!configured) {
       throw new Error(
-        'API key is required to explain code. Run "Untitled: Set API Key" or set OPENROUTER_API_KEY / ANTHROPIC_API_KEY.'
+        'API key is required to explain code. Run "Untitled: Set API Key" or set OPENROUTER_API_KEY.'
       );
     }
     apiKey = await resolveApiKey(context);
@@ -185,7 +172,7 @@ export async function getCore(
     storagePath: storageDir,
     workspaceRoot,
     apiKey: apiKey || undefined,
-    aiProvider: apiProvider as 'anthropic' | 'openai' | 'openrouter' | 'local',
+    aiProvider: apiProvider as 'openrouter' | 'local',
     openRouterModel: apiProvider === 'openrouter' ? openRouterModel : undefined,
     privacyMode: privacyMode as 'standard' | 'strict',
     rateLimits: {

@@ -11,8 +11,8 @@ const core = new UntitledCore({
   userId: 'user-1',
   storagePath: '/path/to/storage',
   workspaceRoot: '/path/to/repo',
-  apiKey: process.env.ANTHROPIC_API_KEY,
-  aiProvider: 'anthropic',
+  apiKey: process.env.OPENROUTER_API_KEY,
+  aiProvider: 'openrouter',
   privacyMode: 'standard',
 });
 

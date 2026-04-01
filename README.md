@@ -26,7 +26,6 @@ cd ../vscode-extension && npm install && npm run compile
 ### 3. Configure API key (default: Open Router, free)
 
 - **Open Router (default, free):** Set your API key via **Untitled: Set API Key** (stored in system keychain per PRD 6.2) or set `OPENROUTER_API_KEY` in your environment. Default model: `nvidia/nemotron-3-nano-30b-a3b:free`. You can change **Untitled: Open Router Model** to other free models (e.g. `meta-llama/llama-3.3-70b-instruct:free`, `stepfun/step-3.5-flash:free`).
-- **Anthropic:** Set **Untitled: API Provider** to `anthropic` and set your Anthropic API key.
 - Code is anonymized before sending in standard privacy mode.
 
 ## Commands (VS Code)

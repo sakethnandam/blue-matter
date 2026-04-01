@@ -7,11 +7,10 @@ import type { RepoContext } from '../models/Context.js';
 import type { UntitledConfig } from '../models/Config.js';
 import { createExplanation } from '../models/Explanation.js';
 import { PromptBuilder } from './PromptBuilder.js';
-import { AnthropicProvider } from './providers/AnthropicProvider.js';
 import { OpenRouterProvider } from './providers/OpenRouterProvider.js';
 import { createLogger } from '../utils/Logger.js';
 
-type AIProvider = AnthropicProvider | OpenRouterProvider;
+type AIProvider = OpenRouterProvider;
 
 export class AIOrchestrator {
   private readonly promptBuilder = new PromptBuilder();
@@ -20,12 +19,7 @@ export class AIOrchestrator {
 
   constructor(private readonly config: UntitledConfig) {
     if (!config.apiKey) return;
-    if (config.aiProvider === 'anthropic') {
-      this.provider = new AnthropicProvider({
-        apiKey: config.apiKey,
-        maxTokens: 1024,
-      });
-    } else if (config.aiProvider === 'openrouter') {
+    if (config.aiProvider === 'openrouter') {
       this.provider = new OpenRouterProvider({
         apiKey: config.apiKey,
         model: config.openRouterModel ?? 'nvidia/nemotron-3-nano-30b-a3b:free',
@@ -70,9 +64,7 @@ export class AIOrchestrator {
       this.provider = null;
       return;
     }
-    if (this.config.aiProvider === 'anthropic') {
-      this.provider = new AnthropicProvider({ apiKey, maxTokens: 1024 });
-    } else if (this.config.aiProvider === 'openrouter') {
+    if (this.config.aiProvider === 'openrouter') {
       this.provider = new OpenRouterProvider({
         apiKey,
         model: this.config.openRouterModel ?? 'nvidia/nemotron-3-nano-30b-a3b:free',
