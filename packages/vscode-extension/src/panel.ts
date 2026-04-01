@@ -10,11 +10,20 @@ import { DASHBOARD_MOTTO, getPanelStyles } from './theme';
 
 let panelRef: ExplanationPanel | null = null;
 
+/** Content Security Policy for all webview pages. No data: URIs, no scripts, no frames, no forms. */
+const WEBVIEW_CSP = "default-src 'none'; style-src 'unsafe-inline'; font-src 'self' vscode-resource: https:; img-src 'self' vscode-resource: https:; script-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none';";
+
 export function getPanel(context: vscode.ExtensionContext): ExplanationPanel {
   if (!panelRef) {
     panelRef = new ExplanationPanel(context);
   }
   return panelRef;
+}
+
+/** Dispose the panel and clear the singleton reference. Call from deactivate(). */
+export function disposePanel(): void {
+  panelRef?.dispose();
+  panelRef = null;
 }
 
 export class ExplanationPanel {
@@ -24,6 +33,11 @@ export class ExplanationPanel {
   private currentFilePath = '';
 
   constructor(private readonly context: vscode.ExtensionContext) {}
+
+  dispose(): void {
+    this.panel?.dispose();
+    this.panel = null;
+  }
 
   reveal(): void {
     if (!this.panel) {
@@ -35,6 +49,7 @@ export class ExplanationPanel {
       );
       this.panel.onDidDispose(() => {
         this.panel = null;
+        panelRef = null;
       });
     }
     this.panel.reveal();
@@ -53,13 +68,12 @@ export class ExplanationPanel {
     );
     const headerHtml = buildHeaderHtml(iconUri.toString());
     const mottoEscaped = escapeHtml(DASHBOARD_MOTTO);
-    const csp = "default-src 'none'; style-src 'unsafe-inline'; font-src 'self' vscode-resource: https:; img-src 'self' data: vscode-resource: https:; script-src 'none';";
     this.panel.title = 'Untitled';
     this.panel.webview.html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="${csp.replace(/"/g, '&quot;')}">
+  <meta http-equiv="Content-Security-Policy" content="${WEBVIEW_CSP.replace(/"/g, '&quot;')}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Untitled</title>
   <style>${getPanelStyles()}</style>
@@ -94,13 +108,12 @@ export class ExplanationPanel {
     const iconUri = this.panel.webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, 'assets', 'untitled-icon.png')
     );
-    const csp = "default-src 'none'; style-src 'unsafe-inline'; font-src 'self' vscode-resource: https:; img-src 'self' data: vscode-resource: https:; script-src 'none';";
     this.panel.title = 'Untitled - Explanation';
     this.panel.webview.html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="${csp.replace(/"/g, '&quot;')}">
+  <meta http-equiv="Content-Security-Policy" content="${WEBVIEW_CSP.replace(/"/g, '&quot;')}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Untitled</title>
   <style>${getPanelStyles()}</style>

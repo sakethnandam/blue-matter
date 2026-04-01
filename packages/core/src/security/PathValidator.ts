@@ -13,8 +13,16 @@ export class SecurityError extends Error {
 }
 
 export class PathValidator {
-  constructor(private readonly workspaceRoot: string) {
-    this.workspaceRoot = path.resolve(workspaceRoot);
+  private readonly workspaceRoot: string;
+
+  constructor(workspaceRoot: string) {
+    const resolved = path.resolve(workspaceRoot);
+    // Resolve symlinks on the workspace root itself so all comparisons use real paths
+    try {
+      this.workspaceRoot = fs.realpathSync(resolved);
+    } catch {
+      this.workspaceRoot = resolved;
+    }
   }
 
   validatePath(inputPath: string): string {
@@ -35,13 +43,14 @@ export class PathValidator {
     const resolved = path.resolve(this.workspaceRoot, trimmed);
     const normalized = path.normalize(resolved);
 
-    if (!normalized.startsWith(this.workspaceRoot)) {
+    // Use separator-aware prefix check to prevent /workspace vs /workspaceEvil bypass
+    if (!normalized.startsWith(this.workspaceRoot + path.sep) && normalized !== this.workspaceRoot) {
       throw new SecurityError('Path outside workspace not allowed');
     }
 
     try {
       const realPath = fs.realpathSync(normalized);
-      if (!realPath.startsWith(this.workspaceRoot)) {
+      if (!realPath.startsWith(this.workspaceRoot + path.sep) && realPath !== this.workspaceRoot) {
         throw new SecurityError('Symlink escape detected');
       }
       return realPath;
@@ -55,7 +64,7 @@ export class PathValidator {
     try {
       const resolved = path.resolve(this.workspaceRoot, inputPath);
       const normalized = path.normalize(resolved);
-      return normalized.startsWith(this.workspaceRoot);
+      return normalized.startsWith(this.workspaceRoot + path.sep) || normalized === this.workspaceRoot;
     } catch {
       return false;
     }

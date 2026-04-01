@@ -22,7 +22,7 @@ export interface UntitledConfig {
   storagePath: string;
   workspaceRoot: string;
   apiKey?: string;
-  aiProvider: 'anthropic' | 'openai' | 'openrouter' | 'local';
+  aiProvider: 'openrouter';
   /** Open Router model id (e.g. nvidia/nemotron-3-nano-30b-a3b:free). Used when aiProvider is 'openrouter'. */
   openRouterModel?: string;
   cacheStrategy: 'aggressive' | 'balanced' | 'minimal';

@@ -59,22 +59,34 @@ export class OpenRouterProvider {
     systemPrompt: string,
     userPrompt: string
   ): Promise<Response> {
-    return fetch(OPENROUTER_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://github.com/untitled',
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: this.maxTokens,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-      }),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30_000);
+    try {
+      return await fetch(OPENROUTER_URL, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://github.com/untitled',
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: this.maxTokens,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+        }),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        throw new Error('Request timed out after 30 seconds. Check your connection and try again.');
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   private async parseSuccessResponse(response: Response): Promise<{ text: string; usage?: OpenRouterUsage }> {
@@ -82,7 +94,9 @@ export class OpenRouterProvider {
       choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
       usage?: { prompt_tokens?: number; completion_tokens?: number };
     };
-    const content = data.choices?.[0]?.message?.content ?? '';
+    const MAX_RESPONSE_CHARS = 50_000;
+    const rawContent = data.choices?.[0]?.message?.content ?? '';
+    const content = typeof rawContent === 'string' ? rawContent.slice(0, MAX_RESPONSE_CHARS) : '';
     const usage = data.usage
       ? { input: data.usage.prompt_tokens ?? 0, output: data.usage.completion_tokens ?? 0 }
       : undefined;

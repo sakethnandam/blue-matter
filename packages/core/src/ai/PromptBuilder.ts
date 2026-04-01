@@ -4,6 +4,7 @@
 
 import type { RepoContext } from '../models/Context.js';
 import { InputSanitizer } from '../security/InputSanitizer.js';
+import { createLogger } from '../utils/Logger.js';
 
 const SYSTEM_PROMPT = `You are a code explanation assistant. Your ONLY task is to explain code in plain English.
 
@@ -17,6 +18,7 @@ CRITICAL RULES:
 
 export class PromptBuilder {
   private readonly sanitizer = new InputSanitizer();
+  private readonly logger = createLogger();
 
   buildExplanationPrompt(code: string, context: RepoContext): { system: string; user: string } {
     const sanitizedCode = this.sanitizeCode(code);
@@ -36,12 +38,15 @@ Provide a clear technical explanation in plain English. Focus on what the code d
   private sanitizeCode(code: string): string {
     const sanitized = this.sanitizer.sanitizeCode(code);
     if (this.sanitizer.detectSuspiciousCode(sanitized)) {
-      // Log but still send - prompt clearly separates instructions from data
+      this.logger.warn('Potential prompt injection detected in code submitted for explanation');
     }
-    return sanitized;
+    // Escape triple backticks so user code cannot close the markdown code fence early
+    return sanitized.replace(/`{3}/g, "'''");
   }
 
   private sanitizeContext(context: RepoContext): string {
-    return context.repoMap.slice(0, 4000);
+    // Pass repo map through annotation sanitizer to strip oversized/suspicious content, then truncate
+    const cleaned = this.sanitizer.sanitizeAnnotation(context.repoMap);
+    return cleaned.slice(0, 4000);
   }
 }

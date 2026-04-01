@@ -5,8 +5,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as os from 'os';
-import { getPanel } from './panel';
-import { getCore, promptForApiKey, hasStoredApiKey, clearStoredApiKey } from './coreAdapter';
+import { getPanel, disposePanel } from './panel';
+import { getCore, promptForApiKey, hasStoredApiKey, clearStoredApiKey, shutdownCore } from './coreAdapter';
 import { registerExplainCodeLensProvider } from './explainCodeLens';
 
 /** Coerce to non-negative integer; supports numbers or numeric strings (CodeLens args can be serialized as strings). */
@@ -60,16 +60,7 @@ function clampRangeToDocument(document: vscode.TextDocument, range: vscode.Range
   return new vscode.Range(startLine, startChar, endLine, endChar);
 }
 
-const DEBUG_LOG = (loc: string, msg: string, data?: Record<string, unknown>) => {
-  // #region agent log
-  fetch('http://127.0.0.1:7244/ingest/f2bd9afe-b006-43ba-88a7-eec12bcad0f2', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: loc, message: msg, data: data ?? {}, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId: 'H1' }) }).catch(() => {});
-  // #endregion
-};
-
 export function activate(context: vscode.ExtensionContext): void {
-  // #region agent log
-  DEBUG_LOG('extension.ts:activate', 'Untitled activate started', {});
-  // #endregion
   const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   statusBar.text = '$(sparkle) Untitled: Ready';
   statusBar.tooltip = 'Click to open Untitled panel. Select code and press Cmd+Shift+E to explain.';
@@ -330,29 +321,16 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // Auto-index on startup if enabled
   if (config.get<boolean>('autoIndex') && workspaceRoot && vscode.workspace.workspaceFolders?.length) {
-    // #region agent log
-    DEBUG_LOG('extension.ts:autoIndex', 'Untitled about to getCore for auto-index', { workspaceRoot: workspaceRoot.slice(0, 50) });
-    // #endregion
     getCore(context, workspaceRoot, storagePath, userId)
-      .then((core) => {
-        // #region agent log
-        DEBUG_LOG('extension.ts:getCore-done', 'Untitled getCore resolved, calling indexRepository', {});
-        // #endregion
-        return core.indexRepository(workspaceRoot);
-      })
+      .then((core) => core.indexRepository(workspaceRoot))
       .then((result) => {
         statusBar.tooltip = `Untitled: ${result.filesIndexed} files indexed. Select code and Cmd+Shift+E to explain.`;
-        // #region agent log
-        DEBUG_LOG('extension.ts:index-done', 'Untitled indexRepository completed', { filesIndexed: result.filesIndexed });
-        // #endregion
       })
       .catch(() => {});
   }
-  // #region agent log
-  DEBUG_LOG('extension.ts:activate', 'Untitled activate completed', {});
-  // #endregion
 }
 
-export function deactivate(): void {
-  // Core shutdown is handled by context disposal if we store it
+export async function deactivate(): Promise<void> {
+  disposePanel();
+  await shutdownCore();
 }

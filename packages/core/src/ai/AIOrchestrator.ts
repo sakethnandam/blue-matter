@@ -7,31 +7,38 @@ import type { RepoContext } from '../models/Context.js';
 import type { UntitledConfig } from '../models/Config.js';
 import { createExplanation } from '../models/Explanation.js';
 import { PromptBuilder } from './PromptBuilder.js';
-import { AnthropicProvider } from './providers/AnthropicProvider.js';
-import { OpenRouterProvider } from './providers/OpenRouterProvider.js';
+import { OpenRouterProvider, DEFAULT_OPENROUTER_FREE_MODEL } from './providers/OpenRouterProvider.js';
 import { createLogger } from '../utils/Logger.js';
-
-type AIProvider = AnthropicProvider | OpenRouterProvider;
 
 export class AIOrchestrator {
   private readonly promptBuilder = new PromptBuilder();
-  private provider: AIProvider | null = null;
+  private provider: OpenRouterProvider | null = null;
   private readonly logger = createLogger();
+  /** Sliding-window rate limiter: stores Unix timestamps (ms) of AI calls in the last hour. */
+  private readonly callTimestamps: number[] = [];
 
   constructor(private readonly config: UntitledConfig) {
     if (!config.apiKey) return;
-    if (config.aiProvider === 'anthropic') {
-      this.provider = new AnthropicProvider({
-        apiKey: config.apiKey,
-        maxTokens: 1024,
-      });
-    } else if (config.aiProvider === 'openrouter') {
-      this.provider = new OpenRouterProvider({
-        apiKey: config.apiKey,
-        model: config.openRouterModel ?? 'nvidia/nemotron-3-nano-30b-a3b:free',
-        maxTokens: 1024,
-      });
+    this.provider = new OpenRouterProvider({
+      apiKey: config.apiKey,
+      model: config.openRouterModel ?? DEFAULT_OPENROUTER_FREE_MODEL,
+      maxTokens: 1024,
+    });
+  }
+
+  /** Enforce per-hour rate limit using a sliding window over callTimestamps. */
+  private checkRateLimit(): void {
+    const now = Date.now();
+    const windowStart = now - 3_600_000; // 1 hour
+    // Evict timestamps outside the window
+    while (this.callTimestamps.length > 0 && this.callTimestamps[0] < windowStart) {
+      this.callTimestamps.shift();
     }
+    const limit = this.config.rateLimits?.explanationsPerHour ?? 100;
+    if (this.callTimestamps.length >= limit) {
+      throw new Error(`Rate limit reached: max ${limit} AI explanations per hour. Try again later.`);
+    }
+    this.callTimestamps.push(now);
   }
 
   async explain(
@@ -43,8 +50,9 @@ export class AIOrchestrator {
       throw new Error('Strict privacy mode: AI calls are disabled. Use cached explanations only.');
     }
     if (!this.provider) {
-      throw new Error('No AI provider configured. Set apiKey and aiProvider in config.');
+      throw new Error('No AI provider configured. Set apiKey in config.');
     }
+    this.checkRateLimit();
     const { system, user } = this.promptBuilder.buildExplanationPrompt(code, context);
     const start = Date.now();
     const { text, usage } = await this.provider.explain(system, user);
@@ -59,7 +67,7 @@ export class AIOrchestrator {
       metadata: {
         language: options.language ?? 'unknown',
         filePath: options.filePath,
-        aiProvider: this.config.aiProvider,
+        aiProvider: 'openrouter',
         tokenCount: (usage?.input ?? 0) + (usage?.output ?? 0),
       },
     });
@@ -70,14 +78,10 @@ export class AIOrchestrator {
       this.provider = null;
       return;
     }
-    if (this.config.aiProvider === 'anthropic') {
-      this.provider = new AnthropicProvider({ apiKey, maxTokens: 1024 });
-    } else if (this.config.aiProvider === 'openrouter') {
-      this.provider = new OpenRouterProvider({
-        apiKey,
-        model: this.config.openRouterModel ?? 'nvidia/nemotron-3-nano-30b-a3b:free',
-        maxTokens: 1024,
-      });
-    }
+    this.provider = new OpenRouterProvider({
+      apiKey,
+      model: this.config.openRouterModel ?? DEFAULT_OPENROUTER_FREE_MODEL,
+      maxTokens: 1024,
+    });
   }
 }

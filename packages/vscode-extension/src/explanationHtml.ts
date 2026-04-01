@@ -50,7 +50,9 @@ function decodeHtmlEntities(s: string): string {
  * Href is decoded before protocol check so entity-encoded schemes cannot bypass (PRD 6.2).
  */
 function sanitizeHtml(html: string): string {
-  const out = html.replace(/<\/?([a-zA-Z0-9]+)(\s[^>]*)?\/?>/g, (full, tagName) => {
+  // Strip HTML comments first to prevent parser differential attacks
+  const noComments = html.replace(/<!--[\s\S]*?-->/g, '');
+  const out = noComments.replace(/<\/?([a-zA-Z0-9]+)(\s[^>]*)?\/?>/g, (full, tagName) => {
     const name = tagName.toLowerCase();
     if (!ALLOWED_TAGS.has(name)) return '';
     if (full.startsWith('</')) return `</${name}>`;
@@ -62,7 +64,9 @@ function sanitizeHtml(html: string): string {
       if (!href) href = '#';
       href = decodeHtmlEntities(href);
       try {
-        const url = new URL(href, 'https://example.com');
+        // Parse without a base URL — relative URLs throw and fall through to '#',
+        // preventing path traversal via ../... or protocol-relative //evil.com links.
+        const url = new URL(href);
         if (!SAFE_LINK_SCHEMES.has(url.protocol)) href = '#';
       } catch {
         href = '#';

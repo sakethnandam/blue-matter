@@ -10,24 +10,23 @@ import * as fs from 'fs';
 /** Secret key for API key in VS Code SecretStorage (OS keychain). */
 export const UNTITLED_API_KEY_SECRET = 'untitled-api-key';
 
-const DEBUG_LOG = (loc: string, msg: string, data?: Record<string, unknown>) => {
-  // #region agent log
-  fetch('http://127.0.0.1:7244/ingest/f2bd9afe-b006-43ba-88a7-eec12bcad0f2', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: loc, message: msg, data: data ?? {}, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId: 'H2' }) }).catch(() => {});
-  // #endregion
-};
-
 let coreInstance: import('@untitled/core').UntitledCore | null = null;
 let coreConfig: { workspaceRoot: string; storagePath: string; userId: string } | null = null;
+/** In-flight init promise — prevents concurrent getCore() calls from creating multiple instances. */
+let coreInitPromise: Promise<import('@untitled/core').UntitledCore> | null = null;
 
-/** Validates API key format (Anthropic, Open Router, or generic sk-). Never log the key. */
+/** OpenRouter model names must follow the org/model or org/model:variant pattern. */
+function isValidModelName(model: string): boolean {
+  return /^[a-zA-Z0-9][a-zA-Z0-9._\-]{0,63}\/[a-zA-Z0-9][a-zA-Z0-9._\-:]{0,100}$/.test(model);
+}
+
+/** Validates Open Router API key format. Never log the key. */
 function isValidApiKeyFormat(key: string): boolean {
   const trimmed = key.trim();
   if (!trimmed || trimmed.length < 20) return false;
-  // Anthropic: sk-ant-...
-  if (/^sk-ant-[a-zA-Z0-9-]{40,}$/.test(trimmed)) return true;
   // Open Router: sk-or-v1-...
   if (/^sk-or-v1-[a-zA-Z0-9-_]+$/.test(trimmed)) return true;
-  // Generic sk- with sufficient length
+  // Generic sk- with sufficient length (fallback for custom deployments)
   if (/^sk-[a-zA-Z0-9-_]{40,}$/.test(trimmed)) return true;
   return false;
 }
@@ -38,7 +37,6 @@ function isValidApiKeyFormat(key: string): boolean {
  */
 async function resolveApiKey(context: vscode.ExtensionContext): Promise<string> {
   const config = vscode.workspace.getConfiguration('untitled');
-  const provider = config.get<string>('apiProvider') || 'openrouter';
 
   let key = await context.secrets.get(UNTITLED_API_KEY_SECRET);
   if (key) {
@@ -62,47 +60,31 @@ async function resolveApiKey(context: vscode.ExtensionContext): Promise<string> 
     );
   }
 
-  const fromEnv =
-    provider === 'openrouter'
-      ? process.env.OPENROUTER_API_KEY?.trim()
-      : process.env.ANTHROPIC_API_KEY?.trim();
+  const fromEnv = process.env.OPENROUTER_API_KEY?.trim();
   return fromEnv || '';
 }
 
 /** Returns true if a key is available from SecretStorage or env (no migration). */
 export async function hasStoredApiKey(context: vscode.ExtensionContext): Promise<boolean> {
-  const config = vscode.workspace.getConfiguration('untitled');
-  const provider = config.get<string>('apiProvider') || 'openrouter';
   const fromSecrets = await context.secrets.get(UNTITLED_API_KEY_SECRET);
   if (fromSecrets && isValidApiKeyFormat(fromSecrets)) return true;
-  const fromEnv =
-    provider === 'openrouter'
-      ? process.env.OPENROUTER_API_KEY?.trim()
-      : process.env.ANTHROPIC_API_KEY?.trim();
+  const fromEnv = process.env.OPENROUTER_API_KEY?.trim();
   return !!fromEnv;
 }
 
-/** Prompt user to enter API key; store in SecretStorage only (PRD: OS keychain). */
+/** Prompt user to enter Open Router API key; store in SecretStorage only (PRD: OS keychain). */
 export async function promptForApiKey(context: vscode.ExtensionContext): Promise<boolean> {
-  const config = vscode.workspace.getConfiguration('untitled');
-  const provider = config.get<string>('apiProvider') || 'openrouter';
-  const providerLabel =
-    provider === 'openrouter'
-      ? 'Open Router (free at https://openrouter.ai/keys)'
-      : provider === 'anthropic'
-        ? 'Anthropic'
-        : 'AI provider';
   const key = await vscode.window.showInputBox({
     title: 'Untitled: API Key',
-    prompt: `Enter your ${providerLabel} API key. Your key is stored in your system keychain and only used for code explanations.`,
-    placeHolder: provider === 'openrouter' ? 'sk-or-v1-...' : 'sk-ant-...',
+    prompt: 'Enter your Open Router API key (free at https://openrouter.ai/keys). Your key is stored in your system keychain and only used for code explanations.',
+    placeHolder: 'sk-or-v1-...',
     password: true,
     ignoreFocusOut: true,
     validateInput: (value) => {
       const trimmed = value?.trim() ?? '';
       if (!trimmed) return 'Please enter an API key.';
       if (!isValidApiKeyFormat(trimmed))
-        return 'Invalid key format. Use a valid API key (e.g. sk-ant-... or sk-or-v1-...).';
+        return 'Invalid key format. Expected sk-or-v1-... (Open Router format). Get a free key at https://openrouter.ai/keys';
       return null;
     },
   });
@@ -131,84 +113,95 @@ export async function clearStoredApiKey(context: vscode.ExtensionContext): Promi
   await context.secrets.delete(UNTITLED_API_KEY_SECRET);
 }
 
+/** Shut down the core instance and clear the singleton. Call from deactivate(). */
+export async function shutdownCore(): Promise<void> {
+  coreInitPromise = null;
+  if (coreInstance) {
+    await coreInstance.shutdown();
+    coreInstance = null;
+    coreConfig = null;
+  }
+}
+
 export async function getCore(
   context: vscode.ExtensionContext,
   workspaceRoot: string,
   storagePath: string,
   userId: string
 ): Promise<import('@untitled/core').UntitledCore> {
-  // #region agent log
-  DEBUG_LOG('coreAdapter.ts:getCore', 'getCore called', {
-    hasExistingCore: !!coreInstance,
-    workspaceRoot: workspaceRoot.slice(0, 40),
-  });
-  // #endregion
+  // Return existing instance if workspace hasn't changed
   if (coreInstance && coreConfig?.workspaceRoot === workspaceRoot) {
     return coreInstance;
   }
-  if (coreInstance) {
-    await coreInstance.shutdown();
-    coreInstance = null;
+  // If already initializing, wait for that promise rather than starting a second init
+  if (coreInitPromise) {
+    return coreInitPromise;
   }
 
-  const untitled = await import('@untitled/core');
-  const config = vscode.workspace.getConfiguration('untitled');
-  let apiProvider = config.get<string>('apiProvider') || 'openrouter';
-  let apiKey = await resolveApiKey(context);
-  if (!apiKey) {
-    const configured = await ensureApiKey(context);
-    if (!configured) {
-      throw new Error(
-        'API key is required to explain code. Run "Untitled: Set API Key" or set OPENROUTER_API_KEY / ANTHROPIC_API_KEY.'
-      );
+  coreInitPromise = (async () => {
+    try {
+      if (coreInstance) {
+        await coreInstance.shutdown();
+        coreInstance = null;
+      }
+
+      const untitled = await import('@untitled/core');
+      const config = vscode.workspace.getConfiguration('untitled');
+      let apiKey = await resolveApiKey(context);
+      if (!apiKey) {
+        const configured = await ensureApiKey(context);
+        if (!configured) {
+          throw new Error(
+            'API key is required to explain code. Run "Untitled: Set API Key" or set the OPENROUTER_API_KEY environment variable.'
+          );
+        }
+        apiKey = await resolveApiKey(context);
+      }
+
+      const DEFAULT_MODEL = 'nvidia/nemotron-3-nano-30b-a3b:free';
+      const rawModel = config.get<string>('openRouterModel') || DEFAULT_MODEL;
+      // Reject model names that don't match the org/model pattern to prevent injection
+      const openRouterModel = isValidModelName(rawModel) ? rawModel : DEFAULT_MODEL;
+
+      const rawPrivacy = config.get<string>('privacyMode') || 'standard';
+      const privacyMode: 'standard' | 'strict' = rawPrivacy === 'strict' ? 'strict' : 'standard';
+
+      const explanationsPerHour = Math.max(1, Math.min(1000, config.get<number>('explanationsPerHour') ?? 100));
+
+      const storageDir = path.dirname(path.join(storagePath, 'untitled.db'));
+      if (!fs.existsSync(storageDir)) {
+        fs.mkdirSync(storageDir, { recursive: true });
+      }
+
+      coreInstance = new untitled.UntitledCore({
+        userId,
+        storagePath: storageDir,
+        workspaceRoot,
+        apiKey: apiKey || undefined,
+        aiProvider: 'openrouter',
+        openRouterModel,
+        privacyMode,
+        rateLimits: {
+          explanationsPerHour,
+          explanationsPerDay: 1000,
+          maxConcurrentRequests: 3,
+          maxCodeBlockSize: 50000,
+        },
+        indexing: {
+          autoIndex: true,
+          debounceMs: 1000,
+          maxFilesToIndex: 10000,
+          maxTotalSizeBytes: 50 * 1024 * 1024,
+          excludePatterns: [],
+        },
+      });
+      coreConfig = { workspaceRoot, storagePath, userId };
+      await coreInstance.initialize();
+      return coreInstance;
+    } finally {
+      coreInitPromise = null;
     }
-    apiKey = await resolveApiKey(context);
-  }
-  apiProvider = config.get<string>('apiProvider') || 'openrouter';
+  })();
 
-  const openRouterModel = config.get<string>('openRouterModel') || 'nvidia/nemotron-3-nano-30b-a3b:free';
-  const privacyMode = config.get<string>('privacyMode') || 'standard';
-  const explanationsPerHour = config.get<number>('explanationsPerHour') ?? 100;
-
-  const storageDir = path.dirname(path.join(storagePath, 'untitled.db'));
-  if (!fs.existsSync(storageDir)) {
-    fs.mkdirSync(storageDir, { recursive: true });
-  }
-
-  // #region agent log
-  DEBUG_LOG('coreAdapter.ts:getCore', 'getCore creating UntitledCore instance', {
-    aiProvider: apiProvider,
-  });
-  // #endregion
-  coreInstance = new untitled.UntitledCore({
-    userId,
-    storagePath: storageDir,
-    workspaceRoot,
-    apiKey: apiKey || undefined,
-    aiProvider: apiProvider as 'anthropic' | 'openai' | 'openrouter' | 'local',
-    openRouterModel: apiProvider === 'openrouter' ? openRouterModel : undefined,
-    privacyMode: privacyMode as 'standard' | 'strict',
-    rateLimits: {
-      explanationsPerHour,
-      explanationsPerDay: 1000,
-      maxConcurrentRequests: 3,
-      maxCodeBlockSize: 50000,
-    },
-    indexing: {
-      autoIndex: true,
-      debounceMs: 1000,
-      maxFilesToIndex: 10000,
-      maxTotalSizeBytes: 50 * 1024 * 1024,
-      excludePatterns: ['**/node_modules/**', '**/dist/**', '**/.git/**', '**/build/**'],
-    },
-  });
-  coreConfig = { workspaceRoot, storagePath, userId };
-  // #region agent log
-  DEBUG_LOG('coreAdapter.ts:getCore', 'getCore calling core.initialize()', {});
-  // #endregion
-  await coreInstance.initialize();
-  // #region agent log
-  DEBUG_LOG('coreAdapter.ts:getCore', 'getCore core initialized', {});
-  // #endregion
-  return coreInstance;
+  return coreInitPromise;
 }

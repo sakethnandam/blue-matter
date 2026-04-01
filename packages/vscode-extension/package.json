@@ -4,6 +4,12 @@
   "description": "Grammarly for Code - Context-aware code explanations and progressive learning",
   "version": "0.1.0",
   "publisher": "untitled",
+  "icon": "assets/untitled-icon.png",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sakethnandam/untitled"
+  },
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -76,12 +82,6 @@
     "configuration": {
       "title": "Untitled",
       "properties": {
-        "untitled.apiProvider": {
-          "type": "string",
-          "enum": ["openrouter", "anthropic", "openai", "local"],
-          "default": "openrouter",
-          "description": "AI provider. Use 'openrouter' with a free key for free models (e.g. nvidia/nemotron-3-nano-30b-a3b:free). Set your API key via command 'Untitled: Set API Key' or OPENROUTER_API_KEY / ANTHROPIC_API_KEY env vars (PRD 6.2: key in keychain only)."
-        },
         "untitled.openRouterModel": {
           "type": "string",
           "default": "nvidia/nemotron-3-nano-30b-a3b:free",
@@ -136,6 +136,7 @@
   "devDependencies": {
     "@types/vscode": "^1.80.0",
     "@types/node": "^22.10.1",
+    "@vscode/vsce": "^3.0.0",
     "typescript": "^5.7.2"
   }
 }

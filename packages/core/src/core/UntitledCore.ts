@@ -136,7 +136,13 @@ export class UntitledCore {
 
   async indexRepository(rootPath: string): Promise<IndexResult> {
     await this.initialize();
-    return this.indexer.indexRepository(rootPath);
+    // Ensure rootPath is the workspace root or a subdirectory of it
+    const resolvedRoot = path.resolve(rootPath);
+    const workspaceRoot = path.resolve(this.config.workspaceRoot);
+    if (resolvedRoot !== workspaceRoot && !resolvedRoot.startsWith(workspaceRoot + path.sep)) {
+      throw new Error('indexRepository: rootPath must be within the workspace');
+    }
+    return this.indexer.indexRepository(resolvedRoot);
   }
 
   async indexFile(filePath: string): Promise<number> {
