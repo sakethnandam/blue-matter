@@ -19,6 +19,7 @@ const DEFAULT_INCLUDE = [
   '**/*.jsx',
   '**/*.tsx',
   '**/*.py',
+  '**/*.ipynb',
   '**/*.mjs',
   '**/*.cjs',
 ];

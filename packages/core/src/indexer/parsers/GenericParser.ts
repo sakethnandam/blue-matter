@@ -65,7 +65,7 @@ function detectLanguage(filePath: string): string {
 
 export class GenericParser implements Parser {
   readonly language = 'generic';
-  readonly extensions = ['.js', '.ts', '.jsx', '.tsx', '.mjs', '.cjs', '.py'];
+  readonly extensions = ['.js', '.ts', '.jsx', '.tsx', '.mjs', '.cjs', '.py', '.ipynb'];
 
   canParse(filePath: string): boolean {
     const ext = filePath.toLowerCase();
@@ -73,10 +73,14 @@ export class GenericParser implements Parser {
   }
 
   parse(content: string, filePath: string): ParseResult {
-    const lang = detectLanguage(filePath);
+    // Treat .ipynb as Python: caller passes pre-extracted code content
+    const effectivePath = filePath.toLowerCase().endsWith('.ipynb')
+      ? filePath.slice(0, -5) + 'py'
+      : filePath;
+    const lang = detectLanguage(effectivePath);
     const patterns = lang === 'python' ? PYTHON_PATTERNS : JS_TS_PATTERNS;
     const symbols: ReturnType<typeof createSymbol>[] = [];
-    const relativePath = filePath.replace(/\\/g, '/');
+    const relativePath = filePath.replace(/\\/g, '/'); // keep original path for storage
 
     for (const type of ['function', 'class'] as const) {
       for (const { name, lineStart, lineEnd } of extractWithPatterns(content, patterns, type)) {

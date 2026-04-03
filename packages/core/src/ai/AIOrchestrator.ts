@@ -7,6 +7,7 @@ import type { RepoContext } from '../models/Context.js';
 import type { BlueMatterConfig } from '../models/Config.js';
 import { createExplanation } from '../models/Explanation.js';
 import { PromptBuilder } from './PromptBuilder.js';
+import type { NotebookPromptContext } from './PromptBuilder.js';
 import { OpenRouterProvider, DEFAULT_OPENROUTER_FREE_MODEL } from './providers/OpenRouterProvider.js';
 import { createLogger } from '../utils/Logger.js';
 
@@ -48,7 +49,12 @@ export class AIOrchestrator {
   async explain(
     code: string,
     context: RepoContext,
-    options: { codeHash: string; filePath?: string; language?: string }
+    options: {
+      codeHash: string;
+      filePath?: string;
+      language?: string;
+      notebookContext?: NotebookPromptContext;
+    }
   ): Promise<Explanation> {
     if (this.config.privacyMode === 'strict') {
       throw new Error('Strict privacy mode: AI calls are disabled. Use cached explanations only.');
@@ -57,7 +63,7 @@ export class AIOrchestrator {
       throw new Error('No AI provider configured. Set apiKey in config.');
     }
     this.checkRateLimit();
-    const { system, user } = this.promptBuilder.buildExplanationPrompt(code, context);
+    const { system, user } = this.promptBuilder.buildExplanationPrompt(code, context, options.notebookContext);
     const start = Date.now();
     const { text, usage } = await this.provider.explain(system, user);
     const duration = Date.now() - start;
@@ -70,6 +76,36 @@ export class AIOrchestrator {
       source: 'ai',
       metadata: {
         language: options.language ?? 'unknown',
+        filePath: options.filePath,
+        aiProvider: 'openrouter',
+        tokenCount: (usage?.input ?? 0) + (usage?.output ?? 0),
+      },
+    });
+  }
+
+  async explainMarkdown(
+    sanitizedMarkdown: string,
+    options: { codeHash: string; filePath?: string; notebookContext?: NotebookPromptContext }
+  ): Promise<Explanation> {
+    if (this.config.privacyMode === 'strict') {
+      throw new Error('Strict privacy mode: AI calls are disabled. Use cached explanations only.');
+    }
+    if (!this.provider) {
+      throw new Error('No AI provider configured. Set apiKey in config.');
+    }
+    this.checkRateLimit();
+    const { system, user } = this.promptBuilder.buildMarkdownCellPrompt(sanitizedMarkdown, options.notebookContext);
+    const start = Date.now();
+    const { text, usage } = await this.provider.explain(system, user);
+    const duration = Date.now() - start;
+    this.logger.info('AI markdown explanation generated', { duration, inputTokens: usage?.input, outputTokens: usage?.output });
+    return createExplanation({
+      codeHash: options.codeHash,
+      text,
+      summary: text.slice(0, 100),
+      source: 'ai',
+      metadata: {
+        language: 'markdown',
         filePath: options.filePath,
         aiProvider: 'openrouter',
         tokenCount: (usage?.input ?? 0) + (usage?.output ?? 0),

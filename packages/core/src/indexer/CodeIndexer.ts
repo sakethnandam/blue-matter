@@ -104,10 +104,47 @@ export class CodeIndexer {
   }
 
   async indexFile(filePath: string): Promise<number> {
+    if (filePath.toLowerCase().endsWith('.ipynb')) {
+      return this.indexNotebookFile(filePath);
+    }
     const fs = await import('node:fs/promises');
     const content = await fs.readFile(filePath, 'utf-8').catch(() => '');
     if (!this.parser.canParse(filePath)) return 0;
     const result = this.parser.parse(content, filePath);
+    return this.persistSymbols(filePath, result);
+  }
+
+  /**
+   * Index a Jupyter notebook by concatenating all code cell sources and parsing as Python.
+   * The .ipynb format stores each cell's source as an array of strings (one per line).
+   */
+  private async indexNotebookFile(filePath: string): Promise<number> {
+    const fs = await import('node:fs/promises');
+    const raw = await fs.readFile(filePath, 'utf-8').catch(() => '');
+    if (!raw) return 0;
+
+    let notebook: { cells?: Array<{ cell_type: string; source: string | string[] }> };
+    try {
+      notebook = JSON.parse(raw) as typeof notebook;
+    } catch {
+      return 0; // malformed JSON — skip silently
+    }
+    if (!Array.isArray(notebook.cells)) return 0;
+
+    const codeParts: string[] = [];
+    for (const cell of notebook.cells) {
+      if (cell.cell_type !== 'code') continue;
+      const source = Array.isArray(cell.source)
+        ? cell.source.join('')
+        : String(cell.source ?? '');
+      if (source.trim()) codeParts.push(source);
+    }
+
+    const combined = codeParts.join('\n');
+    if (!combined.trim()) return 0;
+
+    // Parse as Python by passing combined code with a .py virtual path
+    const result = this.parser.parse(combined, filePath);
     return this.persistSymbols(filePath, result);
   }
 

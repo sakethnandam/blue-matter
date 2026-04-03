@@ -7,7 +7,7 @@ export type { ExplainCodeOptions, ExplainFileOptions, CacheStats, UsageStats } f
 export type { BlueMatterConfig, RateLimits, IndexingConfig } from './models/Config.js';
 export type { Explanation, ExplanationMetadata, Concept, SymbolReference } from './models/Explanation.js';
 export type { Symbol, SymbolType, SymbolMetadata } from './models/Symbol.js';
-export type { RepoContext, FileInfo, ImportGraph } from './models/Context.js';
+export type { RepoContext, FileInfo, ImportGraph, NotebookCellContext, NotebookPrecedingCell } from './models/Context.js';
 export type { Annotation } from './annotations/AnnotationManager.js';
 export type { IndexResult, IndexStatus, IndexError } from './indexer/CodeIndexer.js';
 export { createExplanation } from './models/Explanation.js';

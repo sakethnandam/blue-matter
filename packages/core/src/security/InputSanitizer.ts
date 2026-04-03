@@ -37,4 +37,41 @@ export class InputSanitizer {
     }
     return false;
   }
+
+  /**
+   * Sanitize a markdown cell before including it in an AI prompt.
+   * Strips HTML comments (differential parser attack prevention) and detects injection.
+   */
+  sanitizeMarkdownCell(markdown: string): { sanitized: string; injectionDetected: boolean } {
+    if (typeof markdown !== 'string') return { sanitized: '', injectionDetected: false };
+    // Strip HTML comments first — they can hide injection payloads from UI display
+    const stripped = markdown
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .slice(0, 10_000)
+      .replace(/\0/g, '')
+      .trim();
+    const injectionDetected = this.detectSuspiciousCode(stripped);
+    return { sanitized: stripped, injectionDetected };
+  }
+
+  /**
+   * Scan AI response text for credential-like patterns and redact them.
+   * Defense in depth: the AI should never emit these, but we verify.
+   * Uses local pattern objects on each call — no shared RegExp state.
+   */
+  sanitizeAIResponse(response: string): string {
+    if (typeof response !== 'string') return '';
+    // /g patterns created fresh each call — no shared lastIndex state
+    const patterns: Array<[RegExp, string]> = [
+      [/sk-or-v1-[a-zA-Z0-9\-_]{10,}/g, '[REDACTED_API_KEY]'],
+      [/sk-ant-[a-zA-Z0-9\-_]{10,}/g, '[REDACTED_API_KEY]'],
+      [/sk-[a-zA-Z0-9\-_]{40,}/g, '[REDACTED_API_KEY]'],
+      [/Bearer\s+[a-zA-Z0-9\-_.]{20,}/g, 'Bearer [REDACTED]'],
+    ];
+    let result = response;
+    for (const [re, replacement] of patterns) {
+      result = result.replace(re, replacement);
+    }
+    return result;
+  }
 }

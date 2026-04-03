@@ -1,6 +1,11 @@
 /**
  * CodeLens provider: shows "Explain" button above the current selection.
  * Clicking it runs the same command as Cmd+Shift+E (bluematter.explainCode).
+ *
+ * Supports regular files and Jupyter notebook cell documents
+ * (scheme: vscode-notebook-cell). The selector includes both bare language
+ * entries (for regular files) and scheme-qualified entries (for notebook cells)
+ * so the provider fires reliably across VS Code versions.
  */
 
 import * as vscode from 'vscode';
@@ -31,18 +36,23 @@ export function registerExplainCodeLensProvider(): vscode.Disposable {
         return [];
       }
       const editor = vscode.window.activeTextEditor;
-      if (!editor || editor.document !== document) {
-        return [];
-      }
+      if (!editor) return [];
+
+      // Use URI equality as fallback for notebook cell documents where reference
+      // equality (editor.document !== document) may not hold across VS Code versions.
+      const sameDoc =
+        editor.document === document ||
+        editor.document.uri.toString() === document.uri.toString();
+      if (!sameDoc) return [];
+
       const sel = editor.selection;
-      if (sel.isEmpty) {
-        return [];
-      }
+      if (sel.isEmpty) return [];
+
       const text = document.getText(sel);
-      if (!text.trim()) {
-        return [];
-      }
-      // Place the lens above the first line of the selection; pass URI and range so the command does not rely on current selection (PRD 6: security).
+      if (!text.trim()) return [];
+
+      // Place the lens above the first line of the selection; pass URI and range
+      // so the command does not rely on the current selection at click time (security).
       const range = new vscode.Range(sel.start.line, 0, sel.start.line, 0);
       const rangeArg = {
         start: { line: sel.start.line, character: sel.start.character },
@@ -58,9 +68,16 @@ export function registerExplainCodeLensProvider(): vscode.Disposable {
     },
   };
 
-  const selector = SUPPORTED_LANGUAGES.map((lang) => ({ language: lang }));
+  // Register for both plain-language selectors (regular files) and
+  // scheme-qualified selectors (notebook cell documents).
+  const plainSelectors = SUPPORTED_LANGUAGES.map((lang) => ({ language: lang }));
+  const notebookSelectors = SUPPORTED_LANGUAGES.map((lang) => ({
+    scheme: 'vscode-notebook-cell',
+    language: lang,
+  }));
+
   const lensDisposable = vscode.languages.registerCodeLensProvider(
-    selector,
+    [...plainSelectors, ...notebookSelectors],
     provider
   );
 

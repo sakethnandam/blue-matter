@@ -30,8 +30,14 @@ export class ExplanationCache {
     private readonly userId: string
   ) {}
 
-  generateHash(code: string): string {
-    return generateCodeHash(code);
+  /**
+   * Generate a cache key for code.
+   * Pass `extraContext` to include notebook cell index and dependency summary hash
+   * in the key, so edits to prior cells' imports/definitions invalidate downstream
+   * cached explanations without requiring raw cell content in the key.
+   */
+  generateHash(code: string, extraContext?: string): string {
+    return generateCodeHash(code, extraContext);
   }
 
   get(codeHash: string): Explanation | null {

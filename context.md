@@ -164,6 +164,41 @@ User selects code in editor
 
 ---
 
+## Notebook Support (implemented v0.4)
+
+### Bug that was fixed
+`extension.ts` only allowed `file` and `untitled` URI schemes. Jupyter notebook cells use `vscode-notebook-cell://` URIs, so clicking the CodeLens triggered "Document is not in the workspace." The fix adds `vscode-notebook-cell` to the allowed scheme list and delegates to `DocumentResolver`.
+
+### Architecture
+- `vscode-extension/src/documentResolver.ts` — single module that normalizes "where is the user and what did they select?" for regular files, notebook cells, and `# %%` Python cell-mode files. All notebook-specific VS Code API calls live here.
+- `core/src/notebook/PyCellParser.ts` — regex-based symbol extractor (imports, variables, functions, classes) and `# %%` cell boundary parser. No AST parsing — tolerant of IPython magics and incomplete cell code.
+- `core/src/notebook/NotebookContextBuilder.ts` — builds a compact text summary (< 2000 chars / ~500 tokens) from preceding cells. Hash is computed over the summary, not raw code, so editing only comments in a prior cell does NOT invalidate downstream cache entries.
+- `ExplainCodeOptions.notebookContext` — optional `NotebookCellContext` field; when present, `BlueMatterCore` uses a notebook-aware cache key and injects the dependency summary into the AI prompt.
+
+### Cache key strategy for notebooks
+`hash(normalizedCode + '\x00' + cellIndex + '\x00' + dependencySummaryHash)`
+
+The `dependencySummaryHash` is a SHA-256 of the compact summary (which only captures imports/functions/classes/variables). This means:
+- Adding/changing a comment in Cell 2 → summary unchanged → Cell 5 cache HIT preserved
+- Adding a new import in Cell 2 → summary changes → Cell 5 cache MISS (correctly re-explains)
+
+### Markdown cell handling
+When `notebookContext.cellKind === 'markup'`:
+1. HTML comments stripped, injection patterns detected (logged, not blocked)
+2. If no fenced code blocks: returns `source: 'adapted'` response immediately (no AI call)
+3. If code blocks found: calls `AIOrchestrator.explainMarkdown()` with a dedicated system prompt that forbids following instructions in the content
+
+### AI response sanitization
+All AI responses pass through `InputSanitizer.sanitizeAIResponse()` before caching or returning. Redacts `sk-or-v1-*`, `sk-ant-*`, `sk-[40+]`, and `Bearer [token]` patterns — defense in depth against credential echo.
+
+### .ipynb indexing
+`FileDiscovery` now discovers `**/*.ipynb`. `CodeIndexer.indexNotebookFile()` parses the JSON format, concatenates code cell sources, and passes them to `GenericParser` (treated as Python). `GenericParser` also recognizes `.ipynb` in its `extensions` list.
+
+### # %% cell mode (.py files)
+`documentResolver.ts` detects `# %%` markers in `.py` files at activation time. When present, it computes cell boundaries inline and populates `NotebookCellContext` the same way as `.ipynb` — the rest of the pipeline is identical.
+
+---
+
 ## What's NOT Yet Implemented (PRD backlog)
 
 - Hover preview (P1) — shows cached explanation summary on hover
@@ -191,6 +226,9 @@ User selects code in editor
 | [packages/vscode-extension/src/coreAdapter.ts](packages/vscode-extension/src/coreAdapter.ts) | VS Code ↔ Core bridge, API key management |
 | [packages/vscode-extension/src/panel.ts](packages/vscode-extension/src/panel.ts) | WebView panel (CSP configured here) |
 | [packages/vscode-extension/src/explanationHtml.ts](packages/vscode-extension/src/explanationHtml.ts) | Markdown → safe HTML pipeline |
+| [packages/core/src/notebook/PyCellParser.ts](packages/core/src/notebook/PyCellParser.ts) | Symbol extractor + `# %%` boundary parser |
+| [packages/core/src/notebook/NotebookContextBuilder.ts](packages/core/src/notebook/NotebookContextBuilder.ts) | Dependency summary + cache-stable hash |
+| [packages/vscode-extension/src/documentResolver.ts](packages/vscode-extension/src/documentResolver.ts) | Notebook/file selection normalizer (VS Code adapter layer) |
 | [PRD.md](PRD.md) | Product requirements document (update as scope changes) |
 
 ---
@@ -202,3 +240,4 @@ User selects code in editor
 | v0.1 | Feb 2026 | Initial implementation |
 | v0.2 | Apr 2026 | Removed non-OpenRouter providers; security hardening (telemetry removal, InputSanitizer `/g` flag fix, PathValidator separator check, PromptBuilder fence escape + logging, explanationHtml comment stripping, panel CSP dedup + no `data:`, AnnotationManager LIKE escaping); added test suite (53 tests) |
 | v0.3 | Apr 2026 | Full rebrand to Blue Matter; esbuild bundler; per-day rate limit; cache eviction; logger redaction fix; getOrCreateUserId; localResourceRoots; Content-Type guard |
+| v0.4 | Apr 2026 | Notebook support: fixed `vscode-notebook-cell` scheme bug; `DocumentResolver`; `PyCellParser`; `NotebookContextBuilder`; cross-cell context in AI prompts; `# %%` Python cell-mode support; `.ipynb` indexing; markdown cell handling with injection defense; AI response credential sanitization; 89 tests |

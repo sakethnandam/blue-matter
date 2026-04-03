@@ -17,7 +17,7 @@ npm run test
 # Core package (most work happens here)
 cd packages/core
 npm run build       # TypeScript compile to dist/
-npm run test        # Jest 29 with ESM preset (53 tests)
+npm run test        # Jest 29 with ESM preset (89 tests)
 npm test -- --testPathPattern="InputSanitizer"  # Run a single test file
 
 # VS Code extension
@@ -61,7 +61,10 @@ packages/
 | `core/src/security/PathValidator.ts` | Traversal prevention, symlink-safe prefix check |
 | `core/src/cache/ExplanationCache.ts` | Content-addressed cache keyed by SHA-256 |
 | `core/src/storage/Database.ts` | SQLite via sql.js (WASM, no native bindings) |
+| `core/src/notebook/PyCellParser.ts` | Regex-based symbol extractor for Python cells; `# %%` boundary parser |
+| `core/src/notebook/NotebookContextBuilder.ts` | Builds compact dependency summary from preceding cells; produces cache-stable hash |
 | `vscode-extension/src/extension.ts` | Activation, 10 command registrations, status bar |
+| `vscode-extension/src/documentResolver.ts` | Normalizes file vs. notebook cell selection; builds `NotebookCellContext` for VS Code |
 | `vscode-extension/src/coreAdapter.ts` | VS Code ↔ BlueMatterCore bridge; API key via SecretStorage |
 | `vscode-extension/src/explanationHtml.ts` | Markdown → safe HTML; tag/attr allowlist + URL validation |
 
@@ -103,8 +106,10 @@ Tests live in `packages/core/src/**/*.test.ts`. Coverage focuses on security-cri
 - `security/PathValidator.test.ts` — traversal, symlink, prefix bypass
 - `ai/PromptBuilder.test.ts` — injection defense, fence escaping
 - `ai/providers/OpenRouterProvider.test.ts` — success, fallback, API key not leaked in errors
+- `notebook/PyCellParser.test.ts` — symbol extraction, `# %%` boundary parsing, cell-at-line lookup
+- `notebook/NotebookContextBuilder.test.ts` — summary content, hash stability (comment changes must not change hash)
 
-All 53 tests must pass before merging. Run with `cd packages/core && npm test`.
+All 89 tests must pass before merging. Run with `cd packages/core && npm test`.
 
 ## ESM Notes
 

@@ -3,10 +3,10 @@
  */
 
 import * as vscode from 'vscode';
-import * as path from 'path';
 import { getPanel, disposePanel } from './panel';
 import { getCore, promptForApiKey, hasStoredApiKey, clearStoredApiKey, shutdownCore } from './coreAdapter';
 import { registerExplainCodeLensProvider } from './explainCodeLens';
+import { resolveFromArgs, resolveFromActiveEditor, ALLOWED_SCHEMES } from './documentResolver';
 
 /** Coerce to non-negative integer; supports numbers or numeric strings (CodeLens args can be serialized as strings). */
 function toNonNegativeInt(value: unknown): number | null {
@@ -35,28 +35,19 @@ function isValidRangeArg(
 }
 
 /** Parse range arg to integers (use after isValidRangeArg). CodeLens may pass numbers as strings. */
-function rangeArgToRange(
+function rangeArgToRangeObj(
   rangeArg: { start: { line: number; character: number }; end: { line: number; character: number } }
-): vscode.Range {
-  const startLine = Math.max(0, Math.floor(Number(rangeArg.start.line)));
-  const startChar = Math.max(0, Math.floor(Number(rangeArg.start.character)));
-  const endLine = Math.max(0, Math.floor(Number(rangeArg.end.line)));
-  const endChar = Math.max(0, Math.floor(Number(rangeArg.end.character)));
-  return new vscode.Range(startLine, startChar, endLine, endChar);
-}
-
-/** Clamps range to document bounds; returns null if invalid. */
-function clampRangeToDocument(document: vscode.TextDocument, range: vscode.Range): vscode.Range | null {
-  const lineCount = document.lineCount;
-  if (lineCount === 0) return null;
-  const startLine = Math.max(0, Math.min(range.start.line, lineCount - 1));
-  const endLine = Math.max(0, Math.min(range.end.line, lineCount - 1));
-  const startLineLength = document.lineAt(startLine).text.length;
-  const endLineLength = document.lineAt(endLine).text.length;
-  const startChar = Math.max(0, Math.min(range.start.character, startLineLength));
-  const endChar = Math.max(0, Math.min(range.end.character, endLineLength));
-  if (startLine > endLine || (startLine === endLine && startChar > endChar)) return null;
-  return new vscode.Range(startLine, startChar, endLine, endChar);
+): { start: { line: number; character: number }; end: { line: number; character: number } } {
+  return {
+    start: {
+      line: Math.max(0, Math.floor(Number(rangeArg.start.line))),
+      character: Math.max(0, Math.floor(Number(rangeArg.start.character))),
+    },
+    end: {
+      line: Math.max(0, Math.floor(Number(rangeArg.end.line))),
+      character: Math.max(0, Math.floor(Number(rangeArg.end.character))),
+    },
+  };
 }
 
 /** Persist a UUID for this installation so all users get their own cache bucket (S5). */
@@ -86,88 +77,59 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand(
       'bluematter.explainCode',
       async (uriStringArg?: unknown, rangeArg?: unknown) => {
-        let text: string;
-        let filePath: string;
-        let language: string;
+        let resolved: Awaited<ReturnType<typeof resolveFromArgs>> | ReturnType<typeof resolveFromActiveEditor>;
 
-        // CodeLens passes (uriString, rangeArg) as two separate parameters (VS Code API).
+        // CodeLens path: passes (uriString, rangeArg) as separate parameters
         if (uriStringArg != null && rangeArg != null) {
           const uriString = typeof uriStringArg === 'string' ? uriStringArg : String(uriStringArg);
           if (!uriString.trim()) {
             vscode.window.showWarningMessage('Blue Matter: Invalid document.');
             return;
           }
-          const uri = vscode.Uri.parse(uriString);
-          // Security: only allow file or untitled schemes (no http/https/git/etc.)
-          const allowedSchemes = ['file', 'untitled'];
-          if (!allowedSchemes.includes(uri.scheme)) {
+
+          // Validate scheme before parsing further — allowed: file, untitled, vscode-notebook-cell
+          const parsedUri = vscode.Uri.parse(uriString);
+          if (!(ALLOWED_SCHEMES as readonly string[]).includes(parsedUri.scheme)) {
             vscode.window.showWarningMessage('Blue Matter: Document is not in the workspace.');
             return;
           }
-          const inWorkspace = vscode.workspace.getWorkspaceFolder(uri);
+
           if (!isValidRangeArg(rangeArg)) {
             vscode.window.showWarningMessage('Blue Matter: Invalid selection.');
             return;
           }
-          try {
-            const document = await vscode.workspace.openTextDocument(uri);
-            // Security: for file scheme with workspace open, ensure path is under a workspace folder
-            if (
-              uri.scheme === 'file' &&
-              vscode.workspace.workspaceFolders?.length &&
-              !inWorkspace
-            ) {
-              const docPath = path.normalize(document.uri.fsPath);
-              const underFolder = vscode.workspace.workspaceFolders.some((folder) => {
-                const root = path.normalize(folder.uri.fsPath);
-                return docPath === root || docPath.startsWith(root + path.sep);
-              });
-              if (!underFolder) {
-                vscode.window.showWarningMessage('Blue Matter: Document is not in the workspace.');
-                return;
-              }
-            }
-            const range = clampRangeToDocument(document, rangeArgToRange(rangeArg));
-            if (!range) {
-              vscode.window.showWarningMessage('Blue Matter: Invalid selection.');
-              return;
-            }
-            text = document.getText(range);
-            filePath = document.uri.fsPath;
-            language = document.languageId;
-          } catch {
-            vscode.window.showWarningMessage('Blue Matter: Could not open document.');
-            return;
-          }
+
+          resolved = await resolveFromArgs(uriString, rangeArgToRangeObj(rangeArg));
         } else {
-          let editor = vscode.window.activeTextEditor;
-          if (!editor || editor.selection.isEmpty) {
-            editor = vscode.window.visibleTextEditors.find((e) => !e.selection.isEmpty);
-          }
-          if (!editor) {
-            vscode.window.showWarningMessage('Blue Matter: Open a file and select code to explain.');
-            return;
-          }
-          const selection = editor.selection;
-          text = editor.document.getText(selection);
-          filePath = editor.document.uri.fsPath;
-          language = editor.document.languageId;
+          // Keyboard shortcut path: use active editor (works for both files and notebook cells)
+          resolved = resolveFromActiveEditor();
         }
 
-        if (!text.trim()) {
+        if (!resolved) {
+          if (uriStringArg == null) {
+            vscode.window.showWarningMessage('Blue Matter: Open a file and select code to explain.');
+          }
+          return;
+        }
+
+        const { code, language, filePath, notebookContext } = resolved;
+
+        if (!code.trim()) {
           vscode.window.showWarningMessage('Blue Matter: Select some code first, then run "Explain Selected Code".');
           return;
         }
+
         statusBar.text = '$(sync~spin) Blue Matter: Explaining...';
         try {
           const core = await getCore(context, workspaceRoot, storagePath, userId);
-          const explanation = await core.explainCode(text, {
+          const explanation = await core.explainCode(code, {
             filePath,
             language: language === 'typescript' || language === 'javascript' ? 'javascript' : language,
+            notebookContext,
           });
           const panel = getPanel(context);
           panel.reveal();
-          panel.setExplanation(explanation, text, filePath);
+          panel.setExplanation(explanation, code, filePath);
           statusBar.text = '$(sparkle) Blue Matter: Ready';
         } catch (err) {
           statusBar.text = '$(sparkle) Blue Matter: Ready';
