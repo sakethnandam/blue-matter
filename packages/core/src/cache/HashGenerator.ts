@@ -18,11 +18,14 @@ function normalizeForHash(code: string): string {
 }
 
 /**
- * Generate SHA-256 hash of code (content-based, normalized)
+ * Generate SHA-256 hash of code (content-based, normalized).
+ * Pass `extraContext` (e.g. `cellIndex + '\x00' + dependencySummaryHash`) to
+ * produce a notebook-aware cache key without re-normalizing the suffix.
  */
-export function generateCodeHash(code: string): string {
+export function generateCodeHash(code: string, extraContext?: string): string {
   const normalized = normalizeForHash(code);
-  return createHash('sha256').update(normalized).digest('hex');
+  const input = extraContext ? normalized + '\x00' + extraContext : normalized;
+  return createHash('sha256').update(input).digest('hex');
 }
 
 /**

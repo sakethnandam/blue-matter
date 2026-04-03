@@ -2,7 +2,7 @@
  * Annotation manager - user-created notes on code
  */
 
-import type { UntitledDatabase } from '../storage/Database.js';
+import type { BlueMatterDatabase } from '../storage/Database.js';
 import { InputSanitizer } from '../security/InputSanitizer.js';
 
 export interface Annotation {
@@ -19,7 +19,7 @@ export class AnnotationManager {
   private readonly sanitizer = new InputSanitizer();
 
   constructor(
-    private readonly db: UntitledDatabase,
+    private readonly db: BlueMatterDatabase,
     private readonly userId: string
   ) {}
 
@@ -58,9 +58,14 @@ export class AnnotationManager {
   }
 
   searchAnnotations(query: string): Annotation[] {
-    const pattern = `%${query.trim()}%`;
+    // Escape LIKE metacharacters so user query cannot match all rows via % or _
+    const escaped = query.trim()
+      .replace(/\\/g, '\\\\')
+      .replace(/%/g, '\\%')
+      .replace(/_/g, '\\_');
+    const pattern = `%${escaped}%`;
     const rows = this.db.all<{ id: string; code_hash: string; text: string; tags: string; created_at: number; updated_at: number | null }>(
-      'SELECT id, code_hash, text, tags, created_at, updated_at FROM annotations WHERE user_id = ? AND (text LIKE ? OR tags LIKE ?) ORDER BY created_at DESC LIMIT 100',
+      "SELECT id, code_hash, text, tags, created_at, updated_at FROM annotations WHERE user_id = ? AND (text LIKE ? ESCAPE '\\' OR tags LIKE ? ESCAPE '\\') ORDER BY created_at DESC LIMIT 100",
       this.userId,
       pattern,
       pattern

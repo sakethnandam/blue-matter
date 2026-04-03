@@ -1,8 +1,8 @@
 {
-  "name": "untitled-workspace",
+  "name": "blue-matter-workspace",
   "private": true,
   "version": "0.1.0",
-  "description": "Untitled - Grammarly for Code. Platform-agnostic code intelligence system.",
+  "description": "Blue Matter - Context-aware AI code explanations. Platform-agnostic code intelligence system.",
   "workspaces": [
     "packages/core",
     "packages/vscode-extension"

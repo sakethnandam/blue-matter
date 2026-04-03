@@ -19,6 +19,7 @@ const DEFAULT_INCLUDE = [
   '**/*.jsx',
   '**/*.tsx',
   '**/*.py',
+  '**/*.ipynb',
   '**/*.mjs',
   '**/*.cjs',
 ];
@@ -31,6 +32,18 @@ const DEFAULT_EXCLUDE = [
   '**/out/**',
   '**/.next/**',
   '**/__pycache__/**',
+  // Sensitive files — never index credentials, keys, or secrets
+  '**/.env',
+  '**/.env.*',
+  '**/*.pem',
+  '**/*.key',
+  '**/*.p12',
+  '**/*.pfx',
+  '**/.ssh/**',
+  '**/*.tfstate',
+  '**/*.tfstate.backup',
+  '**/secrets/**',
+  '**/credentials/**',
 ];
 
 export class FileDiscovery {
@@ -39,7 +52,9 @@ export class FileDiscovery {
     options: DiscoveryOptions = {}
   ): Promise<string[]> {
     const include = options.include ?? DEFAULT_INCLUDE;
-    const exclude = options.exclude ?? DEFAULT_EXCLUDE;
+    // Always merge with DEFAULT_EXCLUDE so sensitive file patterns are never dropped
+    const customExclude = options.exclude ?? [];
+    const exclude = [...new Set([...DEFAULT_EXCLUDE, ...customExclude])];
     const maxFiles = options.maxFiles ?? 10_000;
     const maxTotalSizeBytes = options.maxTotalSizeBytes ?? 50 * 1024 * 1024;
 

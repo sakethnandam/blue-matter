@@ -3,8 +3,7 @@
  */
 
 const SENSITIVE_PATTERNS = [
-  /sk-[a-zA-Z0-9]{40,}/g,
-  /sk-ant-[a-zA-Z0-9-_]{40,}/g,
+  /sk-[a-zA-Z0-9_-]{20,}/g,
   /Bearer\s+[a-zA-Z0-9._-]+/g,
   /password["\s:=]+[^\s"]+/gi,
 ];
@@ -54,7 +53,7 @@ export function createLogger(transport?: (level: LogLevel, message: string, meta
     if (transport) {
       transport(level, sanitizedMessage, sanitizedMeta);
     } else {
-      const prefix = `[Untitled] [${level.toUpperCase()}]`;
+      const prefix = `[Blue Matter] [${level.toUpperCase()}]`;
       if (sanitizedMeta) {
         console[level === 'debug' ? 'log' : level](prefix, sanitizedMessage, sanitizedMeta);
       } else {

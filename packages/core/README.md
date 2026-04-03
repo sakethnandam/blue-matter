@@ -1,18 +1,18 @@
-# @untitled/core
+# @blue-matter/core
 
-Platform-agnostic code intelligence engine for Untitled. Used by the VS Code extension and future adapters (Chrome, Replit, etc.).
+Platform-agnostic code intelligence engine for Blue Matter. Used by the VS Code extension and future adapters (Chrome, Replit, etc.).
 
 ## API (high level)
 
 ```ts
-import { UntitledCore } from '@untitled/core';
+import { BlueMatterCore } from '@blue-matter/core';
 
-const core = new UntitledCore({
+const core = new BlueMatterCore({
   userId: 'user-1',
   storagePath: '/path/to/storage',
   workspaceRoot: '/path/to/repo',
-  apiKey: process.env.ANTHROPIC_API_KEY,
-  aiProvider: 'anthropic',
+  apiKey: process.env.OPENROUTER_API_KEY,
+  aiProvider: 'openrouter',
   privacyMode: 'standard',
 });
 
@@ -37,9 +37,9 @@ await core.shutdown();
 ## Design
 
 - **Indexer** — File discovery (fast-glob), generic parser (JS/TS/Python symbols), SQLite-backed symbol index.
-- **Cache** — Explanation cache keyed by content hash (SHA-256 of normalized code).
+- **Cache** — Explanation cache keyed by content hash (SHA-256 of normalized code); LRU eviction at 2000 entries.
 - **Context** — Repo map + symbol definitions for the current file; built for AI prompts.
-- **AI** — Anthropic provider; prompt builder with sanitization and strict “data only” instructions.
+- **AI** — OpenRouter provider; prompt builder with sanitization and strict "data only" instructions.
 - **Security** — Input sanitization, path validation (no traversal), no execution of user code.
 
 ## Build

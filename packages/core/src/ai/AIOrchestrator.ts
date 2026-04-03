@@ -4,48 +4,66 @@
 
 import type { Explanation } from '../models/Explanation.js';
 import type { RepoContext } from '../models/Context.js';
-import type { UntitledConfig } from '../models/Config.js';
+import type { BlueMatterConfig } from '../models/Config.js';
 import { createExplanation } from '../models/Explanation.js';
 import { PromptBuilder } from './PromptBuilder.js';
-import { AnthropicProvider } from './providers/AnthropicProvider.js';
-import { OpenRouterProvider } from './providers/OpenRouterProvider.js';
+import type { NotebookPromptContext } from './PromptBuilder.js';
+import { OpenRouterProvider, DEFAULT_OPENROUTER_FREE_MODEL } from './providers/OpenRouterProvider.js';
 import { createLogger } from '../utils/Logger.js';
-
-type AIProvider = AnthropicProvider | OpenRouterProvider;
 
 export class AIOrchestrator {
   private readonly promptBuilder = new PromptBuilder();
-  private provider: AIProvider | null = null;
+  private provider: OpenRouterProvider | null = null;
   private readonly logger = createLogger();
+  /** Sliding-window rate limiters: per-hour and per-day. */
+  private readonly hourTimestamps: number[] = [];
+  private readonly dayTimestamps: number[] = [];
 
-  constructor(private readonly config: UntitledConfig) {
+  constructor(private readonly config: BlueMatterConfig) {
     if (!config.apiKey) return;
-    if (config.aiProvider === 'anthropic') {
-      this.provider = new AnthropicProvider({
-        apiKey: config.apiKey,
-        maxTokens: 1024,
-      });
-    } else if (config.aiProvider === 'openrouter') {
-      this.provider = new OpenRouterProvider({
-        apiKey: config.apiKey,
-        model: config.openRouterModel ?? 'nvidia/nemotron-3-nano-30b-a3b:free',
-        maxTokens: 1024,
-      });
-    }
+    this.provider = new OpenRouterProvider({
+      apiKey: config.apiKey,
+      model: config.openRouterModel ?? DEFAULT_OPENROUTER_FREE_MODEL,
+      maxTokens: 1024,
+    });
+  }
+
+  /** Enforce per-hour and per-day rate limits using sliding windows. */
+  private checkRateLimit(): void {
+    const now = Date.now();
+    while (this.hourTimestamps[0] < now - 3_600_000) this.hourTimestamps.shift();
+    while (this.dayTimestamps[0] < now - 86_400_000) this.dayTimestamps.shift();
+
+    const hourLimit = this.config.rateLimits?.explanationsPerHour ?? 100;
+    const dayLimit = this.config.rateLimits?.explanationsPerDay ?? 1000;
+
+    if (this.hourTimestamps.length >= hourLimit)
+      throw new Error(`Rate limit: max ${hourLimit} explanations per hour. Try again later.`);
+    if (this.dayTimestamps.length >= dayLimit)
+      throw new Error(`Rate limit: max ${dayLimit} explanations per day. Try again tomorrow.`);
+
+    this.hourTimestamps.push(now);
+    this.dayTimestamps.push(now);
   }
 
   async explain(
     code: string,
     context: RepoContext,
-    options: { codeHash: string; filePath?: string; language?: string }
+    options: {
+      codeHash: string;
+      filePath?: string;
+      language?: string;
+      notebookContext?: NotebookPromptContext;
+    }
   ): Promise<Explanation> {
     if (this.config.privacyMode === 'strict') {
       throw new Error('Strict privacy mode: AI calls are disabled. Use cached explanations only.');
     }
     if (!this.provider) {
-      throw new Error('No AI provider configured. Set apiKey and aiProvider in config.');
+      throw new Error('No AI provider configured. Set apiKey in config.');
     }
-    const { system, user } = this.promptBuilder.buildExplanationPrompt(code, context);
+    this.checkRateLimit();
+    const { system, user } = this.promptBuilder.buildExplanationPrompt(code, context, options.notebookContext);
     const start = Date.now();
     const { text, usage } = await this.provider.explain(system, user);
     const duration = Date.now() - start;
@@ -59,7 +77,37 @@ export class AIOrchestrator {
       metadata: {
         language: options.language ?? 'unknown',
         filePath: options.filePath,
-        aiProvider: this.config.aiProvider,
+        aiProvider: 'openrouter',
+        tokenCount: (usage?.input ?? 0) + (usage?.output ?? 0),
+      },
+    });
+  }
+
+  async explainMarkdown(
+    sanitizedMarkdown: string,
+    options: { codeHash: string; filePath?: string; notebookContext?: NotebookPromptContext }
+  ): Promise<Explanation> {
+    if (this.config.privacyMode === 'strict') {
+      throw new Error('Strict privacy mode: AI calls are disabled. Use cached explanations only.');
+    }
+    if (!this.provider) {
+      throw new Error('No AI provider configured. Set apiKey in config.');
+    }
+    this.checkRateLimit();
+    const { system, user } = this.promptBuilder.buildMarkdownCellPrompt(sanitizedMarkdown, options.notebookContext);
+    const start = Date.now();
+    const { text, usage } = await this.provider.explain(system, user);
+    const duration = Date.now() - start;
+    this.logger.info('AI markdown explanation generated', { duration, inputTokens: usage?.input, outputTokens: usage?.output });
+    return createExplanation({
+      codeHash: options.codeHash,
+      text,
+      summary: text.slice(0, 100),
+      source: 'ai',
+      metadata: {
+        language: 'markdown',
+        filePath: options.filePath,
+        aiProvider: 'openrouter',
         tokenCount: (usage?.input ?? 0) + (usage?.output ?? 0),
       },
     });
@@ -70,14 +118,10 @@ export class AIOrchestrator {
       this.provider = null;
       return;
     }
-    if (this.config.aiProvider === 'anthropic') {
-      this.provider = new AnthropicProvider({ apiKey, maxTokens: 1024 });
-    } else if (this.config.aiProvider === 'openrouter') {
-      this.provider = new OpenRouterProvider({
-        apiKey,
-        model: this.config.openRouterModel ?? 'nvidia/nemotron-3-nano-30b-a3b:free',
-        maxTokens: 1024,
-      });
-    }
+    this.provider = new OpenRouterProvider({
+      apiKey,
+      model: this.config.openRouterModel ?? DEFAULT_OPENROUTER_FREE_MODEL,
+      maxTokens: 1024,
+    });
   }
 }

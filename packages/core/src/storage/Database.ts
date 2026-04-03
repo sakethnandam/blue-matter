@@ -1,5 +1,5 @@
 /**
- * SQLite database wrapper for Untitled storage (sql.js - no native bindings)
+ * SQLite database wrapper for Blue Matter storage (sql.js - no native bindings)
  */
 
 import * as fs from 'node:fs';
@@ -13,7 +13,7 @@ export interface DatabaseConfig {
 
 type SqlJsDatabase = import('sql.js').Database;
 
-export class UntitledDatabase {
+export class BlueMatterDatabase {
   private db: SqlJsDatabase | null = null;
   private readonly dbPath: string;
   private readonly userId: string;

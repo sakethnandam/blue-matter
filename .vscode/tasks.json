@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Build Untitled",
+      "label": "Build Blue Matter",
       "type": "shell",
       "command": "npm run build -w packages/core && npm run compile -w packages/vscode-extension",
       "options": {

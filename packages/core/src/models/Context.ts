@@ -35,3 +35,16 @@ export interface RepoContext {
   importGraph: ImportGraph;
   similarPatterns: Explanation[];
 }
+
+export interface NotebookPrecedingCell {
+  index: number;
+  kind: 'code' | 'markup';
+  source: string;
+}
+
+export interface NotebookCellContext {
+  cellIndex: number;
+  cellKind: 'code' | 'markup';
+  totalCells: number;
+  precedingCells: NotebookPrecedingCell[];
+}
