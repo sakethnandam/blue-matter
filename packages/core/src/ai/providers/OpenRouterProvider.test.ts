@@ -1,7 +1,7 @@
 import { jest } from '@jest/globals';
 import { OpenRouterProvider, DEFAULT_OPENROUTER_FREE_MODEL, FALLBACK_OPENROUTER_FREE_MODEL } from './OpenRouterProvider.js';
 
-type FetchMockResponse = { ok: boolean; status: number; body: object | string };
+type FetchMockResponse = { ok: boolean; status: number; body: object | string; contentType?: string };
 
 function makeFetchMock(responses: FetchMockResponse[]) {
   let callCount = 0;
@@ -10,9 +10,11 @@ function makeFetchMock(responses: FetchMockResponse[]) {
     callCount++;
     const bodyText = typeof r.body === 'string' ? r.body : JSON.stringify(r.body);
     const bodyObj = typeof r.body === 'string' ? JSON.parse(r.body) : r.body;
+    const ct = r.contentType ?? (r.ok ? 'application/json' : 'application/json');
     return Promise.resolve({
       ok: r.ok,
       status: r.status,
+      headers: { get: (name: string) => name.toLowerCase() === 'content-type' ? ct : null },
       json: () => Promise.resolve(bodyObj),
       text: () => Promise.resolve(bodyText),
     });

@@ -1,4 +1,4 @@
-# Untitled: Comprehensive Product Requirements Document
+# Blue Matter: Comprehensive Product Requirements Document
 ## Platform-Agnostic Code Intelligence System
 
 **Version:** 1.0  
@@ -31,7 +31,7 @@
 
 ### 1.1 Product Overview
 
-**Untitled** is a platform-level code intelligence system designed to be the "safety net" and "skill builder" for the new generation of AI-assisted developers. As AI tools make coding more accessible to non-programmers, Untitled bridges the knowledge gap by providing context-aware, plain-English explanations of code—helping users understand what AI has written and learn programming concepts through active use.
+**Blue Matter** is a platform-level code intelligence system designed to be the "safety net" and "skill builder" for the new generation of AI-assisted developers. As AI tools make coding more accessible to non-programmers, Blue Matter bridges the knowledge gap by providing context-aware, plain-English explanations of code—helping users understand what AI has written and learn programming concepts through active use.
 
 ### 1.2 The Problem
 
@@ -51,7 +51,7 @@
 
 ### 1.3 The Solution
 
-**Untitled provides:**
+**Blue Matter provides:**
 
 1. **Context-Aware Code Explanations**: Select any code snippet and get a plain-English explanation that understands your entire codebase's context
 2. **Progressive Learning**: Learn data structures, libraries, and patterns as you use them ("use and learn" vs "learn and use")
@@ -66,7 +66,7 @@
 
 ### 1.4 Key Differentiators
 
-| Feature | Untitled | GitHub Copilot Chat | ChatGPT/Claude | Traditional Docs |
+| Feature | Blue Matter | GitHub Copilot Chat | ChatGPT/Claude | Traditional Docs |
 |---------|----------|---------------------|----------------|------------------|
 | **Understands YOUR codebase** | ✅ Full context | ⚠️ Limited | ❌ No context | ❌ Generic |
 | **Caches explanations** | ✅ Smart cache | ❌ None | ❌ None | N/A |
@@ -96,7 +96,7 @@
 
 **"Empower every developer to understand their code, regardless of how it was written."**
 
-In a world where AI writes more code than humans, Untitled ensures that humans still understand what they're building—transforming AI from a mysterious oracle into a patient teacher.
+In a world where AI writes more code than humans, Blue Matter ensures that humans still understand what they're building—transforming AI from a mysterious oracle into a patient teacher.
 
 ### 2.2 Mission
 
@@ -174,7 +174,7 @@ Build the most context-aware, user-friendly code explanation system that:
 ### 2.6 Strategic Positioning
 
 **Positioning Statement:**
-"For AI-assisted developers who accept code without understanding it, Untitled is a code intelligence platform that provides context-aware explanations and progressive learning—unlike generic AI chats or static documentation, Untitled understands YOUR codebase and teaches you as you build."
+"For AI-assisted developers who accept code without understanding it, Blue Matter is a code intelligence platform that provides context-aware explanations and progressive learning—unlike generic AI chats or static documentation, Blue Matter understands YOUR codebase and teaches you as you build."
 
 **Brand Personality:**
 - **Helpful, not condescending**: "Let me explain this..." not "You should know this..."
@@ -215,7 +215,7 @@ Build the most context-aware, user-friendly code explanation system that:
 - ❌ Feels like they're "cheating" by using AI
 - ❌ Traditional tutorials are too slow for their "build now" workflow
 
-**How Untitled Helps:**
+**How Blue Matter Helps:**
 - Context-aware explanations of AI-generated code
 - Progressive learning: understand concepts as they're used
 - Personal annotations to reinforce learning
@@ -252,7 +252,7 @@ Build the most context-aware, user-friendly code explanation system that:
 - ❌ Struggle to onboard developers into AI-generated codebase
 - ❌ Can't explain technical architecture to investors
 
-**How Untitled Helps:**
+**How Blue Matter Helps:**
 - Explains architectural patterns in plain English
 - Highlights code quality issues
 - Builds mental model of the codebase
@@ -289,7 +289,7 @@ Build the most context-aware, user-friendly code explanation system that:
 - ❌ Copilot suggests code they don't understand
 - ❌ Waste time searching for documentation
 
-**How Untitled Helps:**
+**How Blue Matter Helps:**
 - Quick explanations of unfamiliar patterns
 - Context-aware: shows how code fits into larger project
 - Learn team's coding patterns through cached explanations
@@ -341,7 +341,7 @@ Build the most context-aware, user-friendly code explanation system that:
 **Functionality:**
 1. **Selection Mechanism:**
    - User selects code in editor (mouse or keyboard)
-   - Right-click context menu shows "Explain with Untitled"
+   - Right-click context menu shows "Explain with Blue Matter"
    - Keyboard shortcut (default: `Cmd+Shift+E` / `Ctrl+Shift+E`)
    - Hover tooltip shows "Click for explanation" hint
 
@@ -875,8 +875,8 @@ Handles user authentication and JWT token generation
        └──────────────┴──────────────┴──────────────┘
                             │
                   ┌─────────▼─────────┐
-                  │   Untitled Core   │
-                  │  (@untitled/core) │
+                  │   Blue Matter Core   │
+                  │  (@blue-matter/core) │
                   │  Platform-Agnostic│
                   └─────────┬─────────┘
                             │
@@ -903,7 +903,7 @@ Handles user authentication and JWT token generation
 
 1. **Separation of Concerns**: Core logic is 100% platform-agnostic
 2. **Thin Clients**: Adapters are < 500 lines each, only handle UI and events
-3. **Single Source of Truth**: All intelligence lives in `@untitled/core`
+3. **Single Source of Truth**: All intelligence lives in `@blue-matter/core`
 4. **Offline-First**: Core functionality works without network (cache-only mode)
 5. **Security by Design**: Input sanitization, encryption, and access control at every layer
 
@@ -912,10 +912,10 @@ Handles user authentication and JWT token generation
 **Package Structure:**
 
 ```
-@untitled/core/
+@blue-matter/core/
 ├── src/
 │   ├── core/
-│   │   └── UntitledCore.ts              # Main SDK export
+│   │   └── BlueMatterCore.ts              # Main SDK export
 │   │
 │   ├── indexer/
 │   │   ├── CodeIndexer.ts               # Orchestrates indexing
@@ -1125,7 +1125,7 @@ export interface ImportEdge {
 }
 
 // models/Config.ts
-export interface UntitledConfig {
+export interface BlueMatterConfig {
   userId: string;
   storagePath: string;
   apiKey?: string;
@@ -1282,10 +1282,10 @@ CREATE TABLE cache_metadata (
 #### 5.4.1 Core SDK API
 
 ```typescript
-// @untitled/core main export
+// @blue-matter/core main export
 
-export class UntitledCore {
-  constructor(config: UntitledConfig);
+export class BlueMatterCore {
+  constructor(config: BlueMatterConfig);
   
   // Initialization
   async initialize(): Promise;
@@ -1546,9 +1546,9 @@ Provide a clear technical explanation.`;
 **Attack:**
 ```typescript
 // Malicious user tries to access system files
-await untitled.explainFile('../../../etc/passwd');
-await untitled.explainFile('/etc/shadow');
-await untitled.explainFile('C:\\Windows\\System32\\config\\SAM');
+await blueMatter.explainFile('../../../etc/passwd');
+await blueMatter.explainFile('/etc/shadow');
+await blueMatter.explainFile('C:\\Windows\\System32\\config\\SAM');
 ```
 
 **Defense:**
@@ -1661,14 +1661,14 @@ class APIKeyManager {
     }
     
     // Store in OS keychain (never in files or localStorage)
-    await this.keychain.set('untitled-api-key', key);
+    await this.keychain.set('blue-matter-api-key', key);
     
     // NEVER log the key
     this.logger.info('API key stored securely');
   }
   
   async getKey(): Promise {
-    const key = await this.keychain.get('untitled-api-key');
+    const key = await this.keychain.get('blue-matter-api-key');
     
     // Validate before returning
     if (key && !this.isValidKeyFormat(key)) {
@@ -1787,7 +1787,7 @@ class CodeAnonymizer {
 - Fully offline operation
 
 ```typescript
-interface UntitledConfig {
+interface BlueMatterConfig {
   privacyMode: 'standard' | 'strict';
 }
 
@@ -1854,7 +1854,7 @@ class GDPRCompliance {
     await this.db.run('DELETE FROM learning_progress WHERE user_id = ?', [userId]);
     
     // Securely delete API key from keychain
-    await this.keychain.delete('untitled-api-key');
+    await this.keychain.delete('blue-matter-api-key');
     
     // Log deletion (with user consent)
     this.logger.info('User data deleted', { userId, timestamp: Date.now() });
@@ -1933,7 +1933,7 @@ describe('Input Sanitization', () => {
         console.log('pwned');
       `;
       
-      const core = new UntitledCore(testConfig);
+      const core = new BlueMatterCore(testConfig);
       
       // Should only explain, never execute
       const explanation = await core.explainCode(code);
@@ -2006,7 +2006,7 @@ describe('API Key Security', () => {
 // tests/security/rate-limiting.test.ts
 describe('Rate Limiting', () => {
   it('enforces hourly limits', async () => {
-    const core = new UntitledCore({
+    const core = new BlueMatterCore({
       ...testConfig,
       rateLimits: { explanationsPerHour: 10 }
     });
@@ -2157,7 +2157,7 @@ describe('Rate Limiting', () => {
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ ⚡ Untitled                                   [Minimize] [✕] │
+│ ⚡ Blue Matter                                   [Minimize] [✕] │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │ 📝 Your Note (Feb 1, 2026)                                  │
@@ -2212,7 +2212,7 @@ describe('Rate Limiting', () => {
 1. **Loading State:**
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ ⚡ Untitled                                   [Minimize] [✕] │
+│ ⚡ Blue Matter                                   [Minimize] [✕] │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │ 🔄 Generating explanation...                                │
@@ -2227,7 +2227,7 @@ describe('Rate Limiting', () => {
 2. **Cache Hit State:**
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ ⚡ Untitled                                   [Minimize] [✕] │
+│ ⚡ Blue Matter                                   [Minimize] [✕] │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │ ⚡ Explanation loaded from cache (instant!)                 │
@@ -2242,7 +2242,7 @@ describe('Rate Limiting', () => {
 3. **Error State:**
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ ⚡ Untitled                                   [Minimize] [✕] │
+│ ⚡ Blue Matter                                   [Minimize] [✕] │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │ ⚠️ Rate Limit Exceeded                                      │
@@ -2266,7 +2266,7 @@ function validateEmail(email) {
        ↑ cursor here
 
 ┌────────────────────────────────────────────┐
-│ ⚡ Untitled                                 │
+│ ⚡ Blue Matter                                 │
 ├────────────────────────────────────────────┤
 │ Validates email using regex pattern...     │
 │                                            │
@@ -2288,18 +2288,18 @@ function validateEmail(email) {
 **VS Code Command Palette:**
 
 ```
-> Untitled: Explain Selected Code           Cmd+Shift+E
-> Untitled: Explain Current File            Cmd+Shift+F
-> Untitled: Add Annotation                  Cmd+Shift+N
-> Untitled: Search Annotations              Cmd+Shift+S
-> Untitled: View Learning Progress
-> Untitled: Clear Cache
-> Untitled: Settings
+> Blue Matter: Explain Selected Code           Cmd+Shift+E
+> Blue Matter: Explain Current File            Cmd+Shift+F
+> Blue Matter: Add Annotation                  Cmd+Shift+N
+> Blue Matter: Search Annotations              Cmd+Shift+S
+> Blue Matter: View Learning Progress
+> Blue Matter: Clear Cache
+> Blue Matter: Settings
 ```
 
 #### 7.3.4 Status Bar Indicator
 
-**Bottom status bar shows Untitled status:**
+**Bottom status bar shows Blue Matter status:**
 
 ```
 ┌────────────────────────────────────────────────────────────┐
@@ -2307,15 +2307,15 @@ function validateEmail(email) {
 │ [Standard file content]                                   │
 │                                                            │
 └────────────────────────────────────────────────────────────┘
- Ln 42, Col 15   Spaces: 2   UTF-8   [⚡ Untitled: Ready]
+ Ln 42, Col 15   Spaces: 2   UTF-8   [⚡ Blue Matter: Ready]
                                        ↑ Click to open panel
 ```
 
 **States:**
-- `⚡ Untitled: Ready` - Idle, click to explain selection
-- `⚡ Untitled: Indexing (45%)` - Background indexing in progress
-- `⚡ Untitled: Explaining...` - AI call in progress
-- `⚡ Untitled: 47 concepts learned` - Show progress on hover
+- `⚡ Blue Matter: Ready` - Idle, click to explain selection
+- `⚡ Blue Matter: Indexing (45%)` - Background indexing in progress
+- `⚡ Blue Matter: Explaining...` - AI call in progress
+- `⚡ Blue Matter: 47 concepts learned` - Show progress on hover
 
 #### 7.3.5 Settings Page
 
@@ -2323,7 +2323,7 @@ function validateEmail(email) {
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ ⚡ Untitled Settings                                         │
+│ ⚡ Blue Matter Settings                                         │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │ General                                                     │
@@ -2388,7 +2388,7 @@ Welcome message appears in notification
 **Step 2: API Key Setup**
 ```
 ┌─────────────────────────────────────────────┐
-│ Welcome to Untitled! 👋                     │
+│ Welcome to Blue Matter! 👋                     │
 ├─────────────────────────────────────────────┤
 │                                             │
 │ To get started, connect your AI provider:  │
@@ -2415,7 +2415,7 @@ Welcome message appears in notification
 │ Privacy Settings                            │
 ├─────────────────────────────────────────────┤
 │                                             │
-│ How should Untitled handle your code?       │
+│ How should Blue Matter handle your code?       │
 │                                             │
 │ ◉ Standard Mode (Recommended)               │
 │   • Anonymize code before sending to AI    │
@@ -2428,7 +2428,7 @@ Welcome message appears in notification
 │   • Fully offline operation                │
 │                                             │
 │ ☐ Share anonymized usage statistics        │
-│   (helps improve Untitled)                 │
+│   (helps improve Blue Matter)                 │
 │                                             │
 │ [Continue]  [Back]                          │
 └─────────────────────────────────────────────┘
@@ -2440,7 +2440,7 @@ Welcome message appears in notification
 │ Index Your Codebase                         │
 ├─────────────────────────────────────────────┤
 │                                             │
-│ Untitled will index your workspace to      │
+│ Blue Matter will index your workspace to      │
 │ provide context-aware explanations.         │
 │                                             │
 │ Workspace: /Users/alex/projects/my-saas-app │
@@ -2698,7 +2698,7 @@ Context menu appears:
 │ Copy                   Cmd+C    │
 │ Paste                  Cmd+V    │
 ├─────────────────────────────────┤
-│ ⚡ Explain with Untitled Cmd+Shift+E │
+│ ⚡ Explain with Blue Matter Cmd+Shift+E │
 │ 📝 Add Note           Cmd+Shift+N │
 │ 🔗 Find Similar Code             │
 └─────────────────────────────────┘
@@ -2813,7 +2813,7 @@ Output: README_EXPLAINED.md
 **Example Export Output:**
 ```markdown
 # My SaaS App - Code Documentation
-Generated by Untitled on Feb 2, 2026
+Generated by Blue Matter on Feb 2, 2026
 
 ## Table of Contents
 - [Authentication](#authentication)
@@ -2860,7 +2860,7 @@ async function validateCredentials(email: string, password: string) {
 ```
 New developer joins team
    ↓
-Admin enables Untitled Team tier
+Admin enables Blue Matter Team tier
    ↓
 New developer installs extension
    ↓
@@ -2869,7 +2869,7 @@ Extension detects team workspace
 ┌─────────────────────────────────────────────┐
 │ Welcome to the Engineering Team! 👋         │
 ├─────────────────────────────────────────────┤
-│ Your team uses Untitled for code learning. │
+│ Your team uses Blue Matter for code learning. │
 │                                             │
 │ Team knowledge available:                   │
 │ • 234 shared annotations                    │
@@ -2898,7 +2898,7 @@ Progress tracked (e.g., "5/12 guides completed")
 **Adapter Pattern:**
 ```
                     ┌──────────────────┐
-                    │ @untitled/core   │
+                    │ @blue-matter/core   │
                     │ (Shared Logic)   │
                     └────────┬─────────┘
                              │
@@ -2930,11 +2930,11 @@ Progress tracked (e.g., "5/12 guides completed")
 **Extension Manifest (package.json):**
 ```json
 {
-  "name": "untitled",
-  "displayName": "Untitled - Code Intelligence",
+  "name": "blue-matter",
+  "displayName": "Blue Matter - Code Intelligence",
   "description": "Grammarly for code: Context-aware explanations for AI-assisted developers",
   "version": "1.0.0",
-  "publisher": "untitled",
+  "publisher": "blue-matter",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -2947,34 +2947,34 @@ Progress tracked (e.g., "5/12 guides completed")
   "contributes": {
     "commands": [
       {
-        "command": "untitled.explainCode",
-        "title": "Untitled: Explain Selected Code",
+        "command": "bluematter.explainCode",
+        "title": "Blue Matter: Explain Selected Code",
         "icon": "$(lightbulb)"
       },
       {
-        "command": "untitled.explainFile",
-        "title": "Untitled: Explain Current File"
+        "command": "bluematter.explainFile",
+        "title": "Blue Matter: Explain Current File"
       },
       {
-        "command": "untitled.addAnnotation",
-        "title": "Untitled: Add Annotation"
+        "command": "bluematter.addAnnotation",
+        "title": "Blue Matter: Add Annotation"
       },
       {
-        "command": "untitled.searchAnnotations",
-        "title": "Untitled: Search Annotations"
+        "command": "bluematter.searchAnnotations",
+        "title": "Blue Matter: Search Annotations"
       },
       {
-        "command": "untitled.viewProgress",
-        "title": "Untitled: View Learning Progress"
+        "command": "bluematter.viewProgress",
+        "title": "Blue Matter: View Learning Progress"
       },
       {
-        "command": "untitled.clearCache",
-        "title": "Untitled: Clear Cache"
+        "command": "bluematter.clearCache",
+        "title": "Blue Matter: Clear Cache"
       }
     ],
     "keybindings": [
       {
-        "command": "untitled.explainCode",
+        "command": "bluematter.explainCode",
         "key": "cmd+shift+e",
         "mac": "cmd+shift+e",
         "win": "ctrl+shift+e",
@@ -2985,14 +2985,14 @@ Progress tracked (e.g., "5/12 guides completed")
     "menus": {
       "editor/context": [
         {
-          "command": "untitled.explainCode",
+          "command": "bluematter.explainCode",
           "when": "editorHasSelection",
-          "group": "untitled@1"
+          "group": "bluematter@1"
         },
         {
-          "command": "untitled.addAnnotation",
+          "command": "bluematter.addAnnotation",
           "when": "editorHasSelection",
-          "group": "untitled@2"
+          "group": "bluematter@2"
         }
       ]
     },
@@ -3000,39 +3000,39 @@ Progress tracked (e.g., "5/12 guides completed")
       "activitybar": [
         {
           "id": "untitled",
-          "title": "Untitled",
+          "title": "Blue Matter",
           "icon": "resources/icon.svg"
         }
       ]
     },
     "views": {
-      "untitled": [
+      "bluematter": [
         {
-          "id": "untitled.explanationPanel",
+          "id": "bluematter.explanationPanel",
           "name": "Explanation"
         },
         {
-          "id": "untitled.learningProgress",
+          "id": "bluematter.learningProgress",
           "name": "Learning Progress"
         }
       ]
     },
     "configuration": {
-      "title": "Untitled",
+      "title": "Blue Matter",
       "properties": {
-        "untitled.aiProvider": {
+        "bluematter.aiProvider": {
           "type": "string",
           "enum": ["anthropic", "openai", "local"],
           "default": "anthropic",
           "description": "AI provider for explanations"
         },
-        "untitled.privacyMode": {
+        "bluematter.privacyMode": {
           "type": "string",
           "enum": ["standard", "strict"],
           "default": "standard",
           "description": "Privacy mode for code handling"
         },
-        "untitled.autoIndex": {
+        "bluematter.autoIndex": {
           "type": "boolean",
           "default": true,
           "description": "Automatically index workspace on startup"
@@ -3041,7 +3041,7 @@ Progress tracked (e.g., "5/12 guides completed")
     }
   },
   "dependencies": {
-    "@untitled/core": "^1.0.0"
+    "@blue-matter/core": "^1.0.0"
   }
 }
 ```
@@ -3050,17 +3050,17 @@ Progress tracked (e.g., "5/12 guides completed")
 ```typescript
 // src/extension.ts
 import * as vscode from 'vscode';
-import { UntitledCore } from '@untitled/core';
+import { BlueMatterCore } from '@blue-matter/core';
 import { VSCodeAdapter } from './adapter';
 
 export async function activate(context: vscode.ExtensionContext) {
   // Initialize core
-  const core = new UntitledCore({
+  const core = new BlueMatterCore({
     userId: await getUserId(),
     storagePath: context.globalStorageUri.fsPath,
-    apiKey: await context.secrets.get('untitled-api-key'),
-    aiProvider: vscode.workspace.getConfiguration('untitled').get('aiProvider'),
-    privacyMode: vscode.workspace.getConfiguration('untitled').get('privacyMode')
+    apiKey: await context.secrets.get('blue-matter-api-key'),
+    aiProvider: vscode.workspace.getConfiguration('bluematter').get('aiProvider'),
+    privacyMode: vscode.workspace.getConfiguration('bluematter').get('privacyMode')
   });
   
   await core.initialize();
@@ -3070,21 +3070,21 @@ export async function activate(context: vscode.ExtensionContext) {
   
   // Register commands
   context.subscriptions.push(
-    vscode.commands.registerCommand('untitled.explainCode', () => {
+    vscode.commands.registerCommand('bluematter.explainCode', () => {
       return adapter.explainSelectedCode();
     }),
     
-    vscode.commands.registerCommand('untitled.explainFile', () => {
+    vscode.commands.registerCommand('bluematter.explainFile', () => {
       return adapter.explainCurrentFile();
     }),
     
-    vscode.commands.registerCommand('untitled.addAnnotation', () => {
+    vscode.commands.registerCommand('bluematter.addAnnotation', () => {
       return adapter.addAnnotation();
     })
   );
   
   // Start indexing
-  if (vscode.workspace.getConfiguration('untitled').get('autoIndex')) {
+  if (vscode.workspace.getConfiguration('bluematter').get('autoIndex')) {
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     if (workspaceFolder) {
       adapter.indexWorkspace(workspaceFolder.uri.fsPath);
@@ -3101,13 +3101,13 @@ export function deactivate() {
 ```typescript
 // src/adapter.ts
 import * as vscode from 'vscode';
-import { UntitledCore, Explanation } from '@untitled/core';
+import { BlueMatterCore, Explanation } from '@blue-matter/core';
 
 export class VSCodeAdapter {
   private panel: vscode.WebviewPanel | undefined;
   
   constructor(
-    private core: UntitledCore,
+    private core: BlueMatterCore,
     private context: vscode.ExtensionContext
   ) {}
   
@@ -3148,8 +3148,8 @@ export class VSCodeAdapter {
   private showExplanation(explanation: Explanation) {
     if (!this.panel) {
       this.panel = vscode.window.createWebviewPanel(
-        'untitled.explanation',
-        'Untitled Explanation',
+        'bluematter.explanation',
+        'Blue Matter Explanation',
         vscode.ViewColumn.Beside,
         { enableScripts: true }
       );
@@ -3220,7 +3220,7 @@ export class VSCodeAdapter {
 ```json
 {
   "manifest_version": 3,
-  "name": "Untitled - Code Intelligence",
+  "name": "Blue Matter - Code Intelligence",
   "version": "1.0.0",
   "description": "Context-aware code explanations for browser-based IDEs",
   "permissions": ["storage", "activeTab", "scripting"],
@@ -3267,17 +3267,17 @@ export class VSCodeAdapter {
 **Content Script (Detects Monaco/CodeMirror):**
 ```typescript
 // content.js
-import { UntitledCore } from '@untitled/core';
+import { BlueMatterCore } from '@blue-matter/core';
 import { MonacoAdapter } from './adapters/monaco';
 import { CodeMirrorAdapter } from './adapters/codemirror';
 
 class BrowserExtension {
-  private core: UntitledCore;
+  private core: BlueMatterCore;
   private adapter: MonacoAdapter | CodeMirrorAdapter | null = null;
   
   async initialize() {
     // Initialize core
-    this.core = new UntitledCore({
+    this.core = new BlueMatterCore({
       userId: await this.getUserId(),
       storagePath: await this.getStoragePath(),
       apiKey: await this.getApiKey()
@@ -3292,7 +3292,7 @@ class BrowserExtension {
   private detectEditor() {
     // Check for Monaco (used by VS Code Web, StackBlitz, etc.)
     if (window.monaco) {
-      console.log('[Untitled] Detected Monaco editor');
+      console.log('[Blue Matter] Detected Monaco editor');
       this.adapter = new MonacoAdapter(this.core, window.monaco);
       this.adapter.attach();
       return;
@@ -3300,7 +3300,7 @@ class BrowserExtension {
     
     // Check for CodeMirror (used by Replit, older editors)
     if (window.CodeMirror) {
-      console.log('[Untitled] Detected CodeMirror editor');
+      console.log('[Blue Matter] Detected CodeMirror editor');
       this.adapter = new CodeMirrorAdapter(this.core, window.CodeMirror);
       this.adapter.attach();
       return;
@@ -3323,7 +3323,7 @@ export class MonacoAdapter {
   private panel: HTMLElement | null = null;
   
   constructor(
-    private core: UntitledCore,
+    private core: BlueMatterCore,
     private monaco: any
   ) {}
   
@@ -3331,8 +3331,8 @@ export class MonacoAdapter {
     // Add context menu item
     this.monaco.editor.getEditors().forEach((editor: any) => {
       editor.addAction({
-        id: 'untitled.explain',
-        label: 'Explain with Untitled',
+        id: 'bluematter.explain',
+        label: 'Explain with Blue Matter',
         keybindings: [
           this.monaco.KeyMod.CtrlCmd | this.monaco.KeyMod.Shift | this.monaco.KeyCode.KeyE
         ],
@@ -3354,7 +3354,7 @@ export class MonacoAdapter {
       const explanation = await this.core.explainCode(code);
       this.showPanel(explanation);
     } catch (error) {
-      console.error('[Untitled] Error:', error);
+      console.error('[Blue Matter] Error:', error);
     }
   }
   
@@ -3362,13 +3362,13 @@ export class MonacoAdapter {
     // Create or update floating panel
     if (!this.panel) {
       this.panel = document.createElement('div');
-      this.panel.className = 'untitled-panel';
+      this.panel.className = 'blue-matter-panel';
       this.panel.innerHTML = `
-        <div class="untitled-header">
-          <span>⚡ Untitled</span>
+        <div class="blue-matter-header">
+          <span>⚡ Blue Matter</span>
           <button class="close">✕</button>
         </div>
-        <div class="untitled-content"></div>
+        <div class="blue-matter-content"></div>
       `;
       document.body.appendChild(this.panel);
       
@@ -3379,7 +3379,7 @@ export class MonacoAdapter {
       });
     }
     
-    const content = this.panel.querySelector('.untitled-content');
+    const content = this.panel.querySelector('.blue-matter-content');
     if (content) {
       content.innerHTML = this.formatExplanation(explanation);
     }
@@ -3394,7 +3394,7 @@ export class MonacoAdapter {
 ```typescript
 // Cursor-specific optimizations
 export class CursorAdapter extends VSCodeAdapter {
-  constructor(core: UntitledCore, context: vscode.ExtensionContext) {
+  constructor(core: BlueMatterCore, context: vscode.ExtensionContext) {
     super(core, context);
     
     // Integrate with Cursor's AI chat
@@ -3915,12 +3915,12 @@ export class RateLimiter {
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: untitled-api
+  name: blue-matter-api
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: untitled-api
+    name: blue-matter-api
   minReplicas: 2
   maxReplicas: 10
   metrics:
@@ -4329,7 +4329,7 @@ showExplanationPanel(config.position);
 **Upgrade Prompt UI:**
 ```
 ┌─────────────────────────────────────────────┐
-│ 🚀 Upgrade to Untitled Pro                  │
+│ 🚀 Upgrade to Blue Matter Pro                  │
 ├─────────────────────────────────────────────┤
 │ You've hit your free limit (100/100)       │
 │                                             │
@@ -4358,7 +4358,7 @@ showExplanationPanel(config.position);
    Team: $19.99/user (for teams)
    ```
 3. **Loss Aversion**: "You've saved $25 in API costs this month"
-4. **Social Proof**: "Join 5,000+ developers learning with Untitled Pro"
+4. **Social Proof**: "Join 5,000+ developers learning with Blue Matter Pro"
 5. **Urgency**: "Limited time: Get 2 months free with annual plan"
 
 ### 12.5 Customer Lifetime Value (LTV)
@@ -4691,7 +4691,7 @@ Low Impact, High Effort (DO LAST):
                    Learning-Focused
                           ↑
                           │
-                          │  UNTITLED
+                          │  BLUE MATTER
                           │    ●
                           │
                           │
@@ -4770,15 +4770,15 @@ Low Impact, High Effort (DO LAST):
 
 **Resources:**
 - GitHub: https://github.com/untitled/core
-- Documentation: https://docs.untitled.dev
-- Website: https://untitled.dev
-- Support: support@untitled.dev
-- Security: security@untitled.dev
+- Documentation: https://docs.blue-matter.dev
+- Website: https://blue-matter.dev
+- Support: support@blue-matter.dev
+- Security: security@blue-matter.dev
 
 **Community:**
 - Discord: https://discord.gg/untitled
-- Twitter: @untitleddev
-- Newsletter: https://untitled.dev/newsletter
+- Twitter: @bluematterdev
+- Newsletter: https://blue-matter.dev/newsletter
 
 ---
 

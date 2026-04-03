@@ -3,7 +3,7 @@
 ## [0.1.0] - 2026-04-01
 
 ### Added
-- Initial release of Untitled — context-aware code explanations powered by OpenRouter LLMs.
+- Initial release of Blue Matter — context-aware code explanations powered by OpenRouter LLMs.
 - **Explain Selected Code** (Cmd+Shift+E / Ctrl+Shift+E) — explain any highlighted code block in plain English.
 - **Explain Current File** (Cmd+Shift+F / Ctrl+Shift+F) — explain the full active file.
 - **CodeLens** — inline "Explain" buttons above functions and classes.

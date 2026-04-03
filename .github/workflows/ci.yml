@@ -1,0 +1,35 @@
+name: CI
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  schedule:
+    - cron: '0 9 * * 1'   # Monday 9am UTC — catch newly disclosed CVEs
+
+jobs:
+  audit:
+    name: Security audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - run: cd packages/core && npm audit --audit-level=high
+      - run: cd packages/vscode-extension && npm audit --audit-level=high
+
+  test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: cd packages/core && npm run build && npm test
+      - run: cd packages/vscode-extension && npm run bundle

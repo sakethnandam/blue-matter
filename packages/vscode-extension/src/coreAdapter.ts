@@ -1,5 +1,5 @@
 /**
- * Adapter: loads @untitled/core and creates UntitledCore with VS Code config.
+ * Adapter: loads @blue-matter/core and creates BlueMatterCore with VS Code config.
  * API key is stored in OS keychain via SecretStorage (PRD 6.2, 6.3.2).
  */
 
@@ -8,12 +8,12 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 /** Secret key for API key in VS Code SecretStorage (OS keychain). */
-export const UNTITLED_API_KEY_SECRET = 'untitled-api-key';
+export const BLUE_MATTER_API_KEY_SECRET = 'blue-matter-api-key';
 
-let coreInstance: import('@untitled/core').UntitledCore | null = null;
+let coreInstance: import('@blue-matter/core').BlueMatterCore | null = null;
 let coreConfig: { workspaceRoot: string; storagePath: string; userId: string } | null = null;
 /** In-flight init promise — prevents concurrent getCore() calls from creating multiple instances. */
-let coreInitPromise: Promise<import('@untitled/core').UntitledCore> | null = null;
+let coreInitPromise: Promise<import('@blue-matter/core').BlueMatterCore> | null = null;
 
 /** OpenRouter model names must follow the org/model or org/model:variant pattern. */
 function isValidModelName(model: string): boolean {
@@ -36,12 +36,12 @@ function isValidApiKeyFormat(key: string): boolean {
  * Invalid stored key is deleted and treated as missing.
  */
 async function resolveApiKey(context: vscode.ExtensionContext): Promise<string> {
-  const config = vscode.workspace.getConfiguration('untitled');
+  const config = vscode.workspace.getConfiguration('bluematter');
 
-  let key = await context.secrets.get(UNTITLED_API_KEY_SECRET);
+  let key = await context.secrets.get(BLUE_MATTER_API_KEY_SECRET);
   if (key) {
     if (!isValidApiKeyFormat(key)) {
-      await context.secrets.delete(UNTITLED_API_KEY_SECRET);
+      await context.secrets.delete(BLUE_MATTER_API_KEY_SECRET);
       key = undefined;
     }
   }
@@ -50,13 +50,13 @@ async function resolveApiKey(context: vscode.ExtensionContext): Promise<string> 
   // One-time migration: settings -> SecretStorage
   const fromSettings = config.get<string>('apiKey')?.trim();
   if (fromSettings && isValidApiKeyFormat(fromSettings)) {
-    await context.secrets.store(UNTITLED_API_KEY_SECRET, fromSettings);
+    await context.secrets.store(BLUE_MATTER_API_KEY_SECRET, fromSettings);
     await config.update('apiKey', undefined, vscode.ConfigurationTarget.Global);
     return fromSettings;
   }
   if (fromSettings) {
     vscode.window.showWarningMessage(
-      'Untitled: API key in settings was not migrated (invalid format). Use "Untitled: Set API Key" to store a valid key securely.'
+      'Blue Matter: API key in settings was not migrated (invalid format). Use "Blue Matter: Set API Key" to store a valid key securely.'
     );
   }
 
@@ -66,7 +66,7 @@ async function resolveApiKey(context: vscode.ExtensionContext): Promise<string> 
 
 /** Returns true if a key is available from SecretStorage or env (no migration). */
 export async function hasStoredApiKey(context: vscode.ExtensionContext): Promise<boolean> {
-  const fromSecrets = await context.secrets.get(UNTITLED_API_KEY_SECRET);
+  const fromSecrets = await context.secrets.get(BLUE_MATTER_API_KEY_SECRET);
   if (fromSecrets && isValidApiKeyFormat(fromSecrets)) return true;
   const fromEnv = process.env.OPENROUTER_API_KEY?.trim();
   return !!fromEnv;
@@ -75,7 +75,7 @@ export async function hasStoredApiKey(context: vscode.ExtensionContext): Promise
 /** Prompt user to enter Open Router API key; store in SecretStorage only (PRD: OS keychain). */
 export async function promptForApiKey(context: vscode.ExtensionContext): Promise<boolean> {
   const key = await vscode.window.showInputBox({
-    title: 'Untitled: API Key',
+    title: 'Blue Matter: API Key',
     prompt: 'Enter your Open Router API key (free at https://openrouter.ai/keys). Your key is stored in your system keychain and only used for code explanations.',
     placeHolder: 'sk-or-v1-...',
     password: true,
@@ -91,12 +91,12 @@ export async function promptForApiKey(context: vscode.ExtensionContext): Promise
   if (!key?.trim()) return false;
   const trimmed = key.trim();
   if (!isValidApiKeyFormat(trimmed)) {
-    vscode.window.showErrorMessage('Untitled: Invalid API key format. Key was not stored.');
+    vscode.window.showErrorMessage('Blue Matter: Invalid API key format. Key was not stored.');
     return false;
   }
-  await context.secrets.store(UNTITLED_API_KEY_SECRET, trimmed);
+  await context.secrets.store(BLUE_MATTER_API_KEY_SECRET, trimmed);
   vscode.window.showInformationMessage(
-    'Untitled: API key saved securely. You can now use Explain (Cmd+Shift+E).'
+    'Blue Matter: API key saved securely. You can now use Explain (Cmd+Shift+E).'
   );
   return true;
 }
@@ -110,7 +110,7 @@ export async function ensureApiKey(context: vscode.ExtensionContext): Promise<bo
 
 /** Securely delete stored API key from keychain (PRD 6.4.1 GDPR). */
 export async function clearStoredApiKey(context: vscode.ExtensionContext): Promise<void> {
-  await context.secrets.delete(UNTITLED_API_KEY_SECRET);
+  await context.secrets.delete(BLUE_MATTER_API_KEY_SECRET);
 }
 
 /** Shut down the core instance and clear the singleton. Call from deactivate(). */
@@ -128,7 +128,7 @@ export async function getCore(
   workspaceRoot: string,
   storagePath: string,
   userId: string
-): Promise<import('@untitled/core').UntitledCore> {
+): Promise<import('@blue-matter/core').BlueMatterCore> {
   // Return existing instance if workspace hasn't changed
   if (coreInstance && coreConfig?.workspaceRoot === workspaceRoot) {
     return coreInstance;
@@ -145,14 +145,14 @@ export async function getCore(
         coreInstance = null;
       }
 
-      const untitled = await import('@untitled/core');
-      const config = vscode.workspace.getConfiguration('untitled');
+      const blueMatter = await import('@blue-matter/core');
+      const config = vscode.workspace.getConfiguration('bluematter');
       let apiKey = await resolveApiKey(context);
       if (!apiKey) {
         const configured = await ensureApiKey(context);
         if (!configured) {
           throw new Error(
-            'API key is required to explain code. Run "Untitled: Set API Key" or set the OPENROUTER_API_KEY environment variable.'
+            'API key is required to explain code. Run "Blue Matter: Set API Key" or set the OPENROUTER_API_KEY environment variable.'
           );
         }
         apiKey = await resolveApiKey(context);
@@ -168,12 +168,12 @@ export async function getCore(
 
       const explanationsPerHour = Math.max(1, Math.min(1000, config.get<number>('explanationsPerHour') ?? 100));
 
-      const storageDir = path.dirname(path.join(storagePath, 'untitled.db'));
+      const storageDir = path.dirname(path.join(storagePath, 'blue-matter.db'));
       if (!fs.existsSync(storageDir)) {
         fs.mkdirSync(storageDir, { recursive: true });
       }
 
-      coreInstance = new untitled.UntitledCore({
+      coreInstance = new blueMatter.BlueMatterCore({
         userId,
         storagePath: storageDir,
         workspaceRoot,

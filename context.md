@@ -1,4 +1,4 @@
-# Untitled — Session Context
+# Blue Matter — Session Context
 
 > Keep this file updated as you make changes. It is the primary reference for continuing work in new chat sessions.
 
@@ -6,9 +6,9 @@
 
 ## What This Project Is
 
-**Untitled** is a VS Code extension that explains code in plain English, powered by OpenRouter LLMs. Target users are AI-assisted developers who accept AI-generated code without fully understanding it.
+**Blue Matter** is a VS Code extension that explains code in plain English, powered by OpenRouter LLMs. Target users are AI-assisted developers who accept AI-generated code without fully understanding it.
 
-**Tagline:** "One Brain, Many Hands" — a platform-agnostic `@untitled/core` SDK with thin platform adapters.
+**Tagline:** "One Brain, Many Hands" — a platform-agnostic `@blue-matter/core` SDK with thin platform adapters.
 
 **Current focus:** VS Code extension (stable + launch). Chrome extension, Cursor, and other platforms come later.
 
@@ -19,17 +19,17 @@
 ```
 /untitled
 ├── packages/
-│   ├── core/                      # @untitled/core — platform-agnostic SDK (TypeScript, ESM)
+│   ├── core/                      # @blue-matter/core — platform-agnostic SDK (TypeScript, ESM)
 │   │   ├── src/
 │   │   │   ├── ai/                # AIOrchestrator, PromptBuilder, providers/OpenRouterProvider
 │   │   │   ├── annotations/       # AnnotationManager (user notes on code)
 │   │   │   ├── cache/             # ExplanationCache, HashGenerator
 │   │   │   ├── context/           # ContextBuilder, RepoMapGenerator
-│   │   │   ├── core/              # UntitledCore.ts — main SDK entry point
+│   │   │   ├── core/              # BlueMatterCore (in BlueMatterCore.ts) — main SDK entry point
 │   │   │   ├── indexer/           # CodeIndexer, FileDiscovery, GenericParser
-│   │   │   ├── models/            # TypeScript interfaces: Config, Explanation, Context, Symbol
+│   │   │   ├── models/            # TypeScript interfaces: BlueMatterConfig, Explanation, Context, Symbol
 │   │   │   ├── security/          # InputSanitizer, PathValidator
-│   │   │   ├── storage/           # UntitledDatabase (sql.js wrapper), Migration
+│   │   │   ├── storage/           # BlueMatterDatabase (sql.js wrapper), Migration
 │   │   │   └── utils/             # Logger, Debouncer, Validator
 │   │   ├── jest.config.js         # ESM Jest config (uses ts-jest/presets/default-esm)
 │   │   └── package.json           # "type": "module"; test script uses ../../node_modules/jest
@@ -37,7 +37,7 @@
 │   └── vscode-extension/          # VS Code adapter (thin UI layer)
 │       ├── src/
 │       │   ├── extension.ts       # Activation, command registration
-│       │   ├── coreAdapter.ts     # Bridges VS Code config → UntitledCore; API key management
+│       │   ├── coreAdapter.ts     # Bridges VS Code config → BlueMatterCore; API key management
 │       │   ├── panel.ts           # WebView panel (explanation display)
 │       │   ├── explainCodeLens.ts # CodeLens "Explain" buttons above symbols
 │       │   ├── explanationHtml.ts # Markdown → safe HTML pipeline (marked + sanitizer)
@@ -58,6 +58,7 @@
 | **`enableScripts: false`** on WebView | Markdown is server-side rendered to static HTML by `marked` + custom sanitizer; no JS in panel |
 | **API key in VS Code `SecretStorage`** | OS keychain; never in settings JSON, never logged |
 | **ESM (`"type": "module"`)** | Node ESM throughout core; imports use `.js` extension even for `.ts` source files |
+| **esbuild bundler** | Bundles all deps (including `@blue-matter/core`) into `out/extension.js` for VSIX packaging |
 
 ---
 
@@ -66,8 +67,8 @@
 ```
 User selects code in editor
   → extension.ts command handler
-  → coreAdapter.ts: getCore()          (creates/returns UntitledCore singleton)
-  → UntitledCore.explainCode()
+  → coreAdapter.ts: getCore()          (creates/returns BlueMatterCore singleton)
+  → BlueMatterCore.explainCode()
       → InputSanitizer.sanitizeCode()
       → ExplanationCache.get(hash)     cache hit → return cached Explanation
       → ContextBuilder.build()         cache miss → build repo context
@@ -109,6 +110,7 @@ User selects code in editor
    - CSP: `default-src 'none'; style-src 'unsafe-inline'; img-src 'self' vscode-resource: https:; script-src 'none';`
    - No `data:` URIs allowed
    - `enableScripts: false`
+   - `localResourceRoots` restricted to `assets/`
 
 6. **Database** (`AnnotationManager`):
    - All queries parameterized
@@ -127,8 +129,8 @@ User selects code in editor
 - **Default model:** `nvidia/nemotron-3-nano-30b-a3b:free`
 - **Fallback model:** `meta-llama/llama-3.3-70b-instruct:free` (used automatically on 404)
 - **API key format:** `sk-or-v1-...` (get free key at https://openrouter.ai/keys)
-- **Config setting:** `untitled.openRouterModel` (user can change model in VS Code settings)
-- No Anthropic, OpenAI, or local provider. `AnthropicProvider.ts` was deleted.
+- **Config setting:** `bluematter.openRouterModel` (user can change model in VS Code settings)
+- No Anthropic, OpenAI, or local provider.
 
 ---
 
@@ -136,10 +138,10 @@ User selects code in editor
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `untitled.openRouterModel` | string | `nvidia/nemotron-3-nano-30b-a3b:free` | OpenRouter model id |
-| `untitled.privacyMode` | enum | `standard` | `standard` or `strict` (strict = cache-only, never sends code to AI) |
-| `untitled.autoIndex` | boolean | `true` | Auto-index workspace on startup |
-| `untitled.explanationsPerHour` | number | `100` | Rate limit |
+| `bluematter.openRouterModel` | string | `nvidia/nemotron-3-nano-30b-a3b:free` | OpenRouter model id |
+| `bluematter.privacyMode` | enum | `standard` | `standard` (sends code to OpenRouter) or `strict` (cache-only, never sends code to AI) |
+| `bluematter.autoIndex` | boolean | `true` | Auto-index workspace on startup |
+| `bluematter.explanationsPerHour` | number | `100` | Rate limit |
 
 ---
 
@@ -169,7 +171,6 @@ User selects code in editor
 - Code anonymization before AI calls — strip secrets/emails/IPs from code
 - Learning progress tracking — concept tracking, dashboard
 - Analytics — Mixpanel events
-- Rate limiting enforcement in core — config exists but not enforced
 - FTS5 full-text search for annotations — currently uses LIKE
 - Chrome extension / Monaco / CodeMirror adapters
 - Team tier features — shared knowledge base, team annotations
@@ -182,7 +183,7 @@ User selects code in editor
 
 | File | Purpose |
 |------|---------|
-| [packages/core/src/core/UntitledCore.ts](packages/core/src/core/UntitledCore.ts) | Main SDK entry point — start here to understand the flow |
+| [packages/core/src/core/BlueMatterCore.ts](packages/core/src/core/BlueMatterCore.ts) | Main SDK entry point (`BlueMatterCore` class) — start here to understand the flow |
 | [packages/core/src/ai/AIOrchestrator.ts](packages/core/src/ai/AIOrchestrator.ts) | LLM call management |
 | [packages/core/src/ai/providers/OpenRouterProvider.ts](packages/core/src/ai/providers/OpenRouterProvider.ts) | Only AI provider |
 | [packages/core/src/security/InputSanitizer.ts](packages/core/src/security/InputSanitizer.ts) | Input sanitization + injection detection |
@@ -200,3 +201,4 @@ User selects code in editor
 |---------|------|---------|
 | v0.1 | Feb 2026 | Initial implementation |
 | v0.2 | Apr 2026 | Removed non-OpenRouter providers; security hardening (telemetry removal, InputSanitizer `/g` flag fix, PathValidator separator check, PromptBuilder fence escape + logging, explanationHtml comment stripping, panel CSP dedup + no `data:`, AnnotationManager LIKE escaping); added test suite (53 tests) |
+| v0.3 | Apr 2026 | Full rebrand to Blue Matter; esbuild bundler; per-day rate limit; cache eviction; logger redaction fix; getOrCreateUserId; localResourceRoots; Content-Type guard |

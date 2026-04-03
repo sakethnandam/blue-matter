@@ -1,14 +1,14 @@
 {
-  "name": "untitled",
-  "displayName": "Untitled",
-  "description": "Grammarly for Code - Context-aware code explanations and progressive learning",
+  "name": "blue-matter",
+  "displayName": "Blue Matter for VS Code",
+  "description": "Context-aware AI explanations for any code you select. Understands your repo, caches results, and explains in plain English.",
   "version": "0.1.0",
-  "publisher": "untitled",
-  "icon": "assets/untitled-icon.png",
+  "publisher": "blue-matter",
+  "icon": "assets/blue-matter.png",
   "license": "UNLICENSED",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sakethnandam/untitled"
+    "url": "https://github.com/sakethnandam/blue-matter"
   },
   "engines": {
     "vscode": "^1.80.0"
@@ -18,6 +18,11 @@
     "Machine Learning",
     "Education"
   ],
+  "keywords": ["ai", "code explanation", "openrouter", "learning", "productivity"],
+  "galleryBanner": {
+    "color": "#1a1a2e",
+    "theme": "dark"
+  },
   "activationEvents": [
     "onStartupFinished"
   ],
@@ -25,80 +30,80 @@
   "contributes": {
     "commands": [
       {
-        "command": "untitled.explainCode",
-        "title": "Untitled: Explain Selected Code"
+        "command": "bluematter.explainCode",
+        "title": "Blue Matter: Explain Selected Code"
       },
       {
-        "command": "untitled.explainFile",
-        "title": "Untitled: Explain Current File"
+        "command": "bluematter.explainFile",
+        "title": "Blue Matter: Explain Current File"
       },
       {
-        "command": "untitled.addAnnotation",
-        "title": "Untitled: Add Annotation"
+        "command": "bluematter.addAnnotation",
+        "title": "Blue Matter: Add Annotation"
       },
       {
-        "command": "untitled.searchAnnotations",
-        "title": "Untitled: Search Annotations"
+        "command": "bluematter.searchAnnotations",
+        "title": "Blue Matter: Search Annotations"
       },
       {
-        "command": "untitled.openPanel",
-        "title": "Untitled: Open Explanation Panel"
+        "command": "bluematter.openPanel",
+        "title": "Blue Matter: Open Explanation Panel"
       },
       {
-        "command": "untitled.showDashboard",
-        "title": "Untitled: Show Dashboard"
+        "command": "bluematter.showDashboard",
+        "title": "Blue Matter: Show Dashboard"
       },
       {
-        "command": "untitled.indexWorkspace",
-        "title": "Untitled: Index Workspace"
+        "command": "bluematter.indexWorkspace",
+        "title": "Blue Matter: Index Workspace"
       },
       {
-        "command": "untitled.settings",
-        "title": "Untitled: Open Settings"
+        "command": "bluematter.settings",
+        "title": "Blue Matter: Open Settings"
       },
       {
-        "command": "untitled.setApiKey",
-        "title": "Untitled: Set API Key"
+        "command": "bluematter.setApiKey",
+        "title": "Blue Matter: Set API Key"
       },
       {
-        "command": "untitled.clearStoredApiKey",
-        "title": "Untitled: Clear Stored API Key"
+        "command": "bluematter.clearStoredApiKey",
+        "title": "Blue Matter: Clear Stored API Key"
       }
     ],
     "menus": {
       "editor/context": [
         {
-          "command": "untitled.explainCode",
+          "command": "bluematter.explainCode",
           "when": "editorHasSelection",
           "group": "navigation"
         },
         {
-          "command": "untitled.addAnnotation",
+          "command": "bluematter.addAnnotation",
           "when": "editorHasSelection",
           "group": "navigation"
         }
       ]
     },
     "configuration": {
-      "title": "Untitled",
+      "title": "Blue Matter",
       "properties": {
-        "untitled.openRouterModel": {
+        "bluematter.openRouterModel": {
           "type": "string",
           "default": "nvidia/nemotron-3-nano-30b-a3b:free",
           "description": "Open Router model id (when apiProvider is openrouter). Free: nvidia/nemotron-3-nano-30b-a3b:free, meta-llama/llama-3.3-70b-instruct:free, stepfun/step-3.5-flash:free"
         },
-        "untitled.privacyMode": {
+        "bluematter.privacyMode": {
           "type": "string",
           "enum": ["standard", "strict"],
           "default": "standard",
-          "description": "Privacy mode: standard (anonymize code) or strict (cache-only, never send code)"
+          "description": "Privacy mode: standard (sends selected code to OpenRouter AI) or strict (cache-only, no code is ever sent)"
         },
-        "untitled.autoIndex": {
+        "bluematter.autoIndex": {
           "type": "boolean",
           "default": true,
           "description": "Auto-index workspace on startup"
         },
-        "untitled.explanationsPerHour": {
+        "bluematter.explanationsPerHour": {
           "type": "number",
           "default": 100,
           "description": "Max AI explanations per hour (free tier)"
@@ -107,36 +112,39 @@
     },
     "keybindings": [
       {
-        "command": "untitled.explainCode",
+        "command": "bluematter.explainCode",
         "key": "ctrl+shift+e",
         "mac": "cmd+shift+e"
       },
       {
-        "command": "untitled.explainFile",
-        "key": "ctrl+shift+f",
-        "mac": "cmd+shift+f"
+        "command": "bluematter.explainFile",
+        "key": "ctrl+shift+alt+f",
+        "mac": "cmd+shift+alt+f"
       },
       {
-        "command": "untitled.addAnnotation",
+        "command": "bluematter.addAnnotation",
         "key": "ctrl+shift+n",
         "mac": "cmd+shift+n"
       }
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p .",
-    "watch": "tsc -watch -p .",
+    "vscode:prepublish": "npm run bundle",
+    "bundle": "node esbuild.mjs",
+    "bundle:watch": "node esbuild.mjs --watch",
+    "compile": "tsc -p . --noEmit",
+    "watch": "tsc -watch -p . --noEmit",
     "package": "vsce package --no-dependencies"
   },
   "dependencies": {
-    "@untitled/core": "file:../core",
+    "@blue-matter/core": "file:../core",
     "marked": "17.0.1"
   },
   "devDependencies": {
     "@types/vscode": "^1.80.0",
     "@types/node": "^22.10.1",
     "@vscode/vsce": "^3.0.0",
+    "esbuild": "^0.24.0",
     "typescript": "^5.7.2"
   }
 }

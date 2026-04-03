@@ -4,7 +4,7 @@
 
 import type { Explanation } from '../models/Explanation.js';
 import type { RepoContext } from '../models/Context.js';
-import type { UntitledConfig } from '../models/Config.js';
+import type { BlueMatterConfig } from '../models/Config.js';
 import { createExplanation } from '../models/Explanation.js';
 import { PromptBuilder } from './PromptBuilder.js';
 import { OpenRouterProvider, DEFAULT_OPENROUTER_FREE_MODEL } from './providers/OpenRouterProvider.js';
@@ -14,10 +14,11 @@ export class AIOrchestrator {
   private readonly promptBuilder = new PromptBuilder();
   private provider: OpenRouterProvider | null = null;
   private readonly logger = createLogger();
-  /** Sliding-window rate limiter: stores Unix timestamps (ms) of AI calls in the last hour. */
-  private readonly callTimestamps: number[] = [];
+  /** Sliding-window rate limiters: per-hour and per-day. */
+  private readonly hourTimestamps: number[] = [];
+  private readonly dayTimestamps: number[] = [];
 
-  constructor(private readonly config: UntitledConfig) {
+  constructor(private readonly config: BlueMatterConfig) {
     if (!config.apiKey) return;
     this.provider = new OpenRouterProvider({
       apiKey: config.apiKey,
@@ -26,19 +27,22 @@ export class AIOrchestrator {
     });
   }
 
-  /** Enforce per-hour rate limit using a sliding window over callTimestamps. */
+  /** Enforce per-hour and per-day rate limits using sliding windows. */
   private checkRateLimit(): void {
     const now = Date.now();
-    const windowStart = now - 3_600_000; // 1 hour
-    // Evict timestamps outside the window
-    while (this.callTimestamps.length > 0 && this.callTimestamps[0] < windowStart) {
-      this.callTimestamps.shift();
-    }
-    const limit = this.config.rateLimits?.explanationsPerHour ?? 100;
-    if (this.callTimestamps.length >= limit) {
-      throw new Error(`Rate limit reached: max ${limit} AI explanations per hour. Try again later.`);
-    }
-    this.callTimestamps.push(now);
+    while (this.hourTimestamps[0] < now - 3_600_000) this.hourTimestamps.shift();
+    while (this.dayTimestamps[0] < now - 86_400_000) this.dayTimestamps.shift();
+
+    const hourLimit = this.config.rateLimits?.explanationsPerHour ?? 100;
+    const dayLimit = this.config.rateLimits?.explanationsPerDay ?? 1000;
+
+    if (this.hourTimestamps.length >= hourLimit)
+      throw new Error(`Rate limit: max ${hourLimit} explanations per hour. Try again later.`);
+    if (this.dayTimestamps.length >= dayLimit)
+      throw new Error(`Rate limit: max ${dayLimit} explanations per day. Try again tomorrow.`);
+
+    this.hourTimestamps.push(now);
+    this.dayTimestamps.push(now);
   }
 
   async explain(

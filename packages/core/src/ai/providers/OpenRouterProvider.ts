@@ -38,7 +38,7 @@ function sanitizedError(status: number, bodyText: string, is404Hint?: boolean): 
     return message;
   }
   if (status === 404 || is404Hint) {
-    message += ' Try changing Untitled: Open Router Model in settings to a current free model (see openrouter.ai/collections/free-models).';
+    message += ' Try changing Blue Matter: Open Router Model in settings to a current free model (see openrouter.ai/collections/free-models).';
   }
   return message;
 }
@@ -67,7 +67,7 @@ export class OpenRouterProvider {
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://github.com/untitled',
+          'HTTP-Referer': 'https://github.com/blue-matter',
         },
         body: JSON.stringify({
           model,
@@ -90,6 +90,10 @@ export class OpenRouterProvider {
   }
 
   private async parseSuccessResponse(response: Response): Promise<{ text: string; usage?: OpenRouterUsage }> {
+    const ct = response.headers.get('content-type') ?? '';
+    if (!ct.includes('application/json')) {
+      throw new Error('Unexpected response from OpenRouter. Check your connection and try again.');
+    }
     const data = (await response.json()) as {
       choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
       usage?: { prompt_tokens?: number; completion_tokens?: number };

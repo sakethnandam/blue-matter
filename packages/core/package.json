@@ -1,7 +1,7 @@
 {
-  "name": "@untitled/core",
+  "name": "@blue-matter/core",
   "version": "0.1.0",
-  "description": "Platform-agnostic code intelligence engine for Untitled",
+  "description": "Platform-agnostic code intelligence engine for Blue Matter",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -22,7 +22,6 @@
     "sql.js": "^1.11.0"
   },
   "devDependencies": {
-    "@types/crypto-js": "^4.2.2",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.10.1",
     "@types/sql.js": "^1.4.9",

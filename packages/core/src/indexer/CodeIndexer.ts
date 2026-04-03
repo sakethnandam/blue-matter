@@ -3,7 +3,7 @@
  */
 
 import type { Symbol } from '../models/Symbol.js';
-import type { UntitledDatabase } from '../storage/Database.js';
+import type { BlueMatterDatabase } from '../storage/Database.js';
 import type { IndexingConfig } from '../models/Config.js';
 import { FileDiscovery } from './FileDiscovery.js';
 import { GenericParser } from './parsers/GenericParser.js';
@@ -43,7 +43,7 @@ export class CodeIndexer {
   };
 
   constructor(
-    private readonly db: UntitledDatabase,
+    private readonly db: BlueMatterDatabase,
     private readonly userId: string,
     private readonly config: IndexingConfig
   ) {}

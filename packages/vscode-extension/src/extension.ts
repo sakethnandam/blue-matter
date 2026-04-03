@@ -1,10 +1,9 @@
 /**
- * Untitled VS Code Extension - Thin adapter to @untitled/core
+ * Blue Matter VS Code Extension - Thin adapter to @blue-matter/core
  */
 
 import * as vscode from 'vscode';
 import * as path from 'path';
-import * as os from 'os';
 import { getPanel, disposePanel } from './panel';
 import { getCore, promptForApiKey, hasStoredApiKey, clearStoredApiKey, shutdownCore } from './coreAdapter';
 import { registerExplainCodeLensProvider } from './explainCodeLens';
@@ -60,21 +59,32 @@ function clampRangeToDocument(document: vscode.TextDocument, range: vscode.Range
   return new vscode.Range(startLine, startChar, endLine, endChar);
 }
 
+/** Persist a UUID for this installation so all users get their own cache bucket (S5). */
+function getOrCreateUserId(context: vscode.ExtensionContext): string {
+  const key = 'blue-matter.userId';
+  const stored = context.globalState.get<string>(key);
+  if (stored) return stored;
+  const { randomUUID } = require('crypto') as typeof import('crypto');
+  const id = `bm-${randomUUID()}`;
+  void context.globalState.update(key, id);
+  return id;
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-  statusBar.text = '$(sparkle) Untitled: Ready';
-  statusBar.tooltip = 'Click to open Untitled panel. Select code and press Cmd+Shift+E to explain.';
-  statusBar.command = 'untitled.openPanel';
+  statusBar.text = '$(sparkle) Blue Matter: Ready';
+  statusBar.tooltip = 'Click to open Blue Matter panel. Select code and press Cmd+Shift+E to explain.';
+  statusBar.command = 'bluematter.openPanel';
   statusBar.show();
   context.subscriptions.push(statusBar);
 
-  const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? os.homedir();
+  const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? require('os').homedir();
   const storagePath = context.globalStorageUri.fsPath;
-  const userId = 'vscode-' + (process.env.USER ?? 'default');
+  const userId = getOrCreateUserId(context);
 
   context.subscriptions.push(
     vscode.commands.registerCommand(
-      'untitled.explainCode',
+      'bluematter.explainCode',
       async (uriStringArg?: unknown, rangeArg?: unknown) => {
         let text: string;
         let filePath: string;
@@ -84,25 +94,24 @@ export function activate(context: vscode.ExtensionContext): void {
         if (uriStringArg != null && rangeArg != null) {
           const uriString = typeof uriStringArg === 'string' ? uriStringArg : String(uriStringArg);
           if (!uriString.trim()) {
-            vscode.window.showWarningMessage('Untitled: Invalid document.');
+            vscode.window.showWarningMessage('Blue Matter: Invalid document.');
             return;
           }
           const uri = vscode.Uri.parse(uriString);
           // Security: only allow file or untitled schemes (no http/https/git/etc.)
           const allowedSchemes = ['file', 'untitled'];
           if (!allowedSchemes.includes(uri.scheme)) {
-            vscode.window.showWarningMessage('Untitled: Document is not in the workspace.');
+            vscode.window.showWarningMessage('Blue Matter: Document is not in the workspace.');
             return;
           }
           const inWorkspace = vscode.workspace.getWorkspaceFolder(uri);
-          // Untitled: getWorkspaceFolder often returns undefined; allow. File: allow; we verify path after open when getWorkspaceFolder was undefined (path fallback).
           if (!isValidRangeArg(rangeArg)) {
-            vscode.window.showWarningMessage('Untitled: Invalid selection.');
+            vscode.window.showWarningMessage('Blue Matter: Invalid selection.');
             return;
           }
           try {
             const document = await vscode.workspace.openTextDocument(uri);
-            // Security: for file scheme with workspace open, ensure path is under a workspace folder (fallback when getWorkspaceFolder failed)
+            // Security: for file scheme with workspace open, ensure path is under a workspace folder
             if (
               uri.scheme === 'file' &&
               vscode.workspace.workspaceFolders?.length &&
@@ -114,20 +123,20 @@ export function activate(context: vscode.ExtensionContext): void {
                 return docPath === root || docPath.startsWith(root + path.sep);
               });
               if (!underFolder) {
-                vscode.window.showWarningMessage('Untitled: Document is not in the workspace.');
+                vscode.window.showWarningMessage('Blue Matter: Document is not in the workspace.');
                 return;
               }
             }
             const range = clampRangeToDocument(document, rangeArgToRange(rangeArg));
             if (!range) {
-              vscode.window.showWarningMessage('Untitled: Invalid selection.');
+              vscode.window.showWarningMessage('Blue Matter: Invalid selection.');
               return;
             }
             text = document.getText(range);
             filePath = document.uri.fsPath;
             language = document.languageId;
           } catch {
-            vscode.window.showWarningMessage('Untitled: Could not open document.');
+            vscode.window.showWarningMessage('Blue Matter: Could not open document.');
             return;
           }
         } else {
@@ -136,7 +145,7 @@ export function activate(context: vscode.ExtensionContext): void {
             editor = vscode.window.visibleTextEditors.find((e) => !e.selection.isEmpty);
           }
           if (!editor) {
-            vscode.window.showWarningMessage('Untitled: Open a file and select code to explain.');
+            vscode.window.showWarningMessage('Blue Matter: Open a file and select code to explain.');
             return;
           }
           const selection = editor.selection;
@@ -146,10 +155,10 @@ export function activate(context: vscode.ExtensionContext): void {
         }
 
         if (!text.trim()) {
-          vscode.window.showWarningMessage('Untitled: Select some code first, then run "Explain Selected Code".');
+          vscode.window.showWarningMessage('Blue Matter: Select some code first, then run "Explain Selected Code".');
           return;
         }
-        statusBar.text = '$(sync~spin) Untitled: Explaining...';
+        statusBar.text = '$(sync~spin) Blue Matter: Explaining...';
         try {
           const core = await getCore(context, workspaceRoot, storagePath, userId);
           const explanation = await core.explainCode(text, {
@@ -159,11 +168,11 @@ export function activate(context: vscode.ExtensionContext): void {
           const panel = getPanel(context);
           panel.reveal();
           panel.setExplanation(explanation, text, filePath);
-          statusBar.text = '$(sparkle) Untitled: Ready';
+          statusBar.text = '$(sparkle) Blue Matter: Ready';
         } catch (err) {
-          statusBar.text = '$(sparkle) Untitled: Ready';
+          statusBar.text = '$(sparkle) Blue Matter: Ready';
           const message = err instanceof Error ? err.message : String(err);
-          vscode.window.showErrorMessage(`Untitled: ${message}`);
+          vscode.window.showErrorMessage(`Blue Matter: ${message}`);
         }
       }
     ),
@@ -171,13 +180,13 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('untitled.explainFile', async () => {
+    vscode.commands.registerCommand('bluematter.explainFile', async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor) {
-        vscode.window.showWarningMessage('Untitled: Open a file first.');
+        vscode.window.showWarningMessage('Blue Matter: Open a file first.');
         return;
       }
-      statusBar.text = '$(sync~spin) Untitled: Explaining file...';
+      statusBar.text = '$(sync~spin) Blue Matter: Explaining file...';
       try {
         const core = await getCore(context, workspaceRoot, storagePath, userId);
         const filePath = editor.document.uri.fsPath;
@@ -185,21 +194,21 @@ export function activate(context: vscode.ExtensionContext): void {
         const panel = getPanel(context);
         panel.reveal();
         panel.setExplanation(explanation, editor.document.getText(), filePath);
-        statusBar.text = '$(sparkle) Untitled: Ready';
+        statusBar.text = '$(sparkle) Blue Matter: Ready';
       } catch (err) {
-        statusBar.text = '$(sparkle) Untitled: Ready';
-        vscode.window.showErrorMessage(`Untitled: ${err instanceof Error ? err.message : String(err)}`);
+        statusBar.text = '$(sparkle) Blue Matter: Ready';
+        vscode.window.showErrorMessage(`Blue Matter: ${err instanceof Error ? err.message : String(err)}`);
       }
     })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('untitled.addAnnotation', async () => {
+    vscode.commands.registerCommand('bluematter.addAnnotation', async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor) return;
       const text = editor.document.getText(editor.selection);
       if (!text.trim()) {
-        vscode.window.showWarningMessage('Untitled: Select code first.');
+        vscode.window.showWarningMessage('Blue Matter: Select code first.');
         return;
       }
       const core = await getCore(context, workspaceRoot, storagePath, userId);
@@ -210,12 +219,12 @@ export function activate(context: vscode.ExtensionContext): void {
       });
       if (!note) return;
       core.createAnnotation(codeHash, note);
-      vscode.window.showInformationMessage('Untitled: Annotation saved.');
+      vscode.window.showInformationMessage('Blue Matter: Annotation saved.');
     })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('untitled.searchAnnotations', async () => {
+    vscode.commands.registerCommand('bluematter.searchAnnotations', async () => {
       const query = await vscode.window.showInputBox({ prompt: 'Search annotations' });
       if (!query) return;
       const core = await getCore(context, workspaceRoot, storagePath, userId);
@@ -235,80 +244,80 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('untitled.openPanel', () => {
+    vscode.commands.registerCommand('bluematter.openPanel', () => {
       getPanel(context).reveal();
     })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('untitled.showDashboard', () => {
+    vscode.commands.registerCommand('bluematter.showDashboard', () => {
       getPanel(context).reveal();
       getPanel(context).showDashboard();
     })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('untitled.indexWorkspace', async () => {
+    vscode.commands.registerCommand('bluematter.indexWorkspace', async () => {
       if (!workspaceRoot || !vscode.workspace.workspaceFolders?.length) {
-        vscode.window.showWarningMessage('Untitled: Open a workspace first.');
+        vscode.window.showWarningMessage('Blue Matter: Open a workspace first.');
         return;
       }
-      statusBar.text = '$(sync~spin) Untitled: Indexing...';
+      statusBar.text = '$(sync~spin) Blue Matter: Indexing...';
       try {
         const core = await getCore(context, workspaceRoot, storagePath, userId);
         const result = await core.indexRepository(workspaceRoot);
-        statusBar.text = '$(sparkle) Untitled: Ready';
+        statusBar.text = '$(sparkle) Blue Matter: Ready';
         vscode.window.showInformationMessage(
-          `Untitled: Indexed ${result.filesIndexed} files, ${result.symbolsExtracted} symbols in ${(result.duration / 1000).toFixed(1)}s.`
+          `Blue Matter: Indexed ${result.filesIndexed} files, ${result.symbolsExtracted} symbols in ${(result.duration / 1000).toFixed(1)}s.`
         );
       } catch (err) {
-        statusBar.text = '$(sparkle) Untitled: Ready';
-        vscode.window.showErrorMessage(`Untitled: ${err instanceof Error ? err.message : String(err)}`);
+        statusBar.text = '$(sparkle) Blue Matter: Ready';
+        vscode.window.showErrorMessage(`Blue Matter: ${err instanceof Error ? err.message : String(err)}`);
       }
     })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('untitled.settings', () => {
-      vscode.commands.executeCommand('workbench.action.openSettings', 'untitled');
+    vscode.commands.registerCommand('bluematter.settings', () => {
+      vscode.commands.executeCommand('workbench.action.openSettings', 'bluematter');
     })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('untitled.setApiKey', async () => {
+    vscode.commands.registerCommand('bluematter.setApiKey', async () => {
       const ok = await promptForApiKey(context);
       if (!ok) {
         vscode.window.showInformationMessage(
-          "Untitled: You can set your API key later with 'Untitled: Set API Key' or set OPENROUTER_API_KEY / ANTHROPIC_API_KEY."
+          "Blue Matter: You can set your API key later with 'Blue Matter: Set API Key' or set the OPENROUTER_API_KEY environment variable."
         );
       }
     })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('untitled.clearStoredApiKey', async () => {
+    vscode.commands.registerCommand('bluematter.clearStoredApiKey', async () => {
       await clearStoredApiKey(context);
-      vscode.window.showInformationMessage('Untitled: Stored API key cleared from system keychain.');
+      vscode.window.showInformationMessage('Blue Matter: Stored API key cleared from system keychain.');
     })
   );
 
   // First-time: if no API key (secrets + env), show a one-time prompt after a short delay
-  const seenPrompt = context.globalState.get<boolean>('untitled.hasSeenApiKeyPrompt');
+  const seenPrompt = context.globalState.get<boolean>('blue-matter.hasSeenApiKeyPrompt');
   hasStoredApiKey(context)
     .then((hasKey) => {
       if (!hasKey && !seenPrompt) {
-        context.globalState.update('untitled.hasSeenApiKeyPrompt', true);
+        context.globalState.update('blue-matter.hasSeenApiKeyPrompt', true);
         setTimeout(() => {
           vscode.window
             .showInformationMessage(
-              'Untitled: Add an API key to explain code (Cmd+Shift+E). Get a free key at openrouter.ai/keys.',
+              'Blue Matter: Add an API key to explain code (Cmd+Shift+E). Get a free key at openrouter.ai/keys.',
               'Set API Key',
               'Open Settings'
             )
             .then((choice) => {
               if (choice === 'Set API Key') void promptForApiKey(context);
               if (choice === 'Open Settings')
-                vscode.commands.executeCommand('workbench.action.openSettings', 'untitled');
+                vscode.commands.executeCommand('workbench.action.openSettings', 'bluematter');
             });
         }, 2000);
       }
@@ -317,14 +326,14 @@ export function activate(context: vscode.ExtensionContext): void {
       // SecretStorage or env check failed; skip first-time prompt so activation continues
     });
 
-  const config = vscode.workspace.getConfiguration('untitled');
+  const config = vscode.workspace.getConfiguration('bluematter');
 
   // Auto-index on startup if enabled
   if (config.get<boolean>('autoIndex') && workspaceRoot && vscode.workspace.workspaceFolders?.length) {
     getCore(context, workspaceRoot, storagePath, userId)
       .then((core) => core.indexRepository(workspaceRoot))
       .then((result) => {
-        statusBar.tooltip = `Untitled: ${result.filesIndexed} files indexed. Select code and Cmd+Shift+E to explain.`;
+        statusBar.tooltip = `Blue Matter: ${result.filesIndexed} files indexed. Select code and Cmd+Shift+E to explain.`;
       })
       .catch(() => {});
   }

@@ -1,10 +1,10 @@
 /**
- * @untitled/core - Platform-agnostic code intelligence engine
+ * @blue-matter/core - Platform-agnostic code intelligence engine
  */
 
-export { UntitledCore } from './core/UntitledCore.js';
-export type { ExplainCodeOptions, ExplainFileOptions, CacheStats, UsageStats } from './core/UntitledCore.js';
-export type { UntitledConfig, RateLimits, IndexingConfig } from './models/Config.js';
+export { BlueMatterCore } from './core/BlueMatterCore.js';
+export type { ExplainCodeOptions, ExplainFileOptions, CacheStats, UsageStats } from './core/BlueMatterCore.js';
+export type { BlueMatterConfig, RateLimits, IndexingConfig } from './models/Config.js';
 export type { Explanation, ExplanationMetadata, Concept, SymbolReference } from './models/Explanation.js';
 export type { Symbol, SymbolType, SymbolMetadata } from './models/Symbol.js';
 export type { RepoContext, FileInfo, ImportGraph } from './models/Context.js';

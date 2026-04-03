@@ -3,7 +3,7 @@
  */
 
 import type { Explanation } from '../models/Explanation.js';
-import type { UntitledDatabase } from '../storage/Database.js';
+import type { BlueMatterDatabase } from '../storage/Database.js';
 import { generateCodeHash, generateStructuralSignature } from './HashGenerator.js';
 import { createExplanation } from '../models/Explanation.js';
 
@@ -26,7 +26,7 @@ export interface CacheEntry {
 
 export class ExplanationCache {
   constructor(
-    private readonly db: UntitledDatabase,
+    private readonly db: BlueMatterDatabase,
     private readonly userId: string
   ) {}
 
@@ -79,6 +79,23 @@ export class ExplanationCache {
       hash
     );
     return rows.map((r) => this.rowToExplanation(r));
+  }
+
+  evictOldEntries(maxEntries = 2000): number {
+    const count = this.db.get<{ count: number }>(
+      'SELECT COUNT(*) as count FROM explanations WHERE user_id = ?',
+      this.userId
+    )?.count ?? 0;
+    if (count <= maxEntries) return 0;
+    const excess = count - maxEntries;
+    this.db.run(
+      `DELETE FROM explanations WHERE user_id = ? AND id IN (
+         SELECT id FROM explanations WHERE user_id = ?
+         ORDER BY accessed_at ASC LIMIT ?
+       )`,
+      this.userId, this.userId, excess
+    );
+    return excess;
   }
 
   getStats(): { total: number; recentCount: number } {

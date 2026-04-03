@@ -2,7 +2,7 @@
  * Annotation manager - user-created notes on code
  */
 
-import type { UntitledDatabase } from '../storage/Database.js';
+import type { BlueMatterDatabase } from '../storage/Database.js';
 import { InputSanitizer } from '../security/InputSanitizer.js';
 
 export interface Annotation {
@@ -19,7 +19,7 @@ export class AnnotationManager {
   private readonly sanitizer = new InputSanitizer();
 
   constructor(
-    private readonly db: UntitledDatabase,
+    private readonly db: BlueMatterDatabase,
     private readonly userId: string
   ) {}
 

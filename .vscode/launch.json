@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run Untitled Extension",
+      "name": "Run Blue Matter Extension",
       "type": "extensionHost",
       "request": "launch",
       "args": [
@@ -11,14 +11,14 @@
       "outFiles": [
         "${workspaceFolder}/packages/vscode-extension/out/**/*.js"
       ],
-      "preLaunchTask": "Build Untitled",
+      "preLaunchTask": "Build Blue Matter",
       "sourceMaps": true,
       "env": {
         "NODE_OPTIONS": "--no-deprecation"
       }
     },
     {
-      "name": "Run Untitled Extension (no build)",
+      "name": "Run Blue Matter Extension (no build)",
       "type": "extensionHost",
       "request": "launch",
       "args": [
@@ -33,17 +33,17 @@
       }
     },
     {
-      "name": "Run Untitled Extension (open test folder)",
+      "name": "Run Blue Matter Extension (open test folder)",
       "type": "extensionHost",
       "request": "launch",
       "args": [
-        "${env:UNTITLED_TEST_FOLDER}",
+        "${env:BLUE_MATTER_TEST_FOLDER}",
         "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-extension"
       ],
       "outFiles": [
         "${workspaceFolder}/packages/vscode-extension/out/**/*.js"
       ],
-      "preLaunchTask": "Build Untitled",
+      "preLaunchTask": "Build Blue Matter",
       "sourceMaps": true,
       "env": {
         "NODE_OPTIONS": "--no-deprecation"

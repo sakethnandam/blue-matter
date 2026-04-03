@@ -1,3 +1,5 @@
+node_modules/**
+
 # Source — only ship compiled output
 src/**
 **/*.ts

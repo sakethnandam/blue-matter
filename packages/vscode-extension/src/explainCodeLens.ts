@@ -1,6 +1,6 @@
 /**
  * CodeLens provider: shows "Explain" button above the current selection.
- * Clicking it runs the same command as Cmd+Shift+E (untitled.explainCode).
+ * Clicking it runs the same command as Cmd+Shift+E (bluematter.explainCode).
  */
 
 import * as vscode from 'vscode';
@@ -51,7 +51,7 @@ export function registerExplainCodeLensProvider(): vscode.Disposable {
       return [
         new vscode.CodeLens(range, {
           title: '$(book) Explain',
-          command: 'untitled.explainCode',
+          command: 'bluematter.explainCode',
           arguments: [document.uri.toString(), rangeArg],
         }),
       ];

@@ -1,5 +1,5 @@
 /**
- * Configuration types for UntitledCore
+ * Configuration types for BlueMatterCore
  */
 
 export interface RateLimits {
@@ -17,7 +17,7 @@ export interface IndexingConfig {
   excludePatterns: string[];
 }
 
-export interface UntitledConfig {
+export interface BlueMatterConfig {
   userId: string;
   storagePath: string;
   workspaceRoot: string;
@@ -46,7 +46,7 @@ export const DEFAULT_INDEXING_CONFIG: IndexingConfig = {
   excludePatterns: ['**/node_modules/**', '**/dist/**', '**/.git/**', '**/build/**'],
 };
 
-export const DEFAULT_CONFIG: Partial<UntitledConfig> = {
+export const DEFAULT_CONFIG: Partial<BlueMatterConfig> = {
   aiProvider: 'openrouter',
   openRouterModel: 'nvidia/nemotron-3-nano-30b-a3b:free',
   cacheStrategy: 'balanced',

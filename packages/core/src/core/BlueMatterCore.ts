@@ -1,13 +1,13 @@
 /**
- * UntitledCore - main SDK entry point
+ * BlueMatterCore - main SDK entry point
  */
 
 import type { Explanation } from '../models/Explanation.js';
 import type { Symbol } from '../models/Symbol.js';
 import type { RepoContext } from '../models/Context.js';
-import type { UntitledConfig } from '../models/Config.js';
+import type { BlueMatterConfig } from '../models/Config.js';
 import { DEFAULT_CONFIG } from '../models/Config.js';
-import { UntitledDatabase } from '../storage/Database.js';
+import { BlueMatterDatabase } from '../storage/Database.js';
 import { CodeIndexer } from '../indexer/CodeIndexer.js';
 import { ExplanationCache } from '../cache/ExplanationCache.js';
 import { ContextBuilder } from '../context/ContextBuilder.js';
@@ -51,9 +51,9 @@ export interface UsageStats {
   annotationsCreated: number;
 }
 
-export class UntitledCore {
-  private readonly config: UntitledConfig;
-  private db: UntitledDatabase;
+export class BlueMatterCore {
+  private readonly config: BlueMatterConfig;
+  private db: BlueMatterDatabase;
   private indexer: CodeIndexer;
   private cache: ExplanationCache;
   private contextBuilder: ContextBuilder;
@@ -64,10 +64,10 @@ export class UntitledCore {
   private initialized = false;
   private usageCount = { ai: 0, cache: 0 };
 
-  constructor(config: Partial<UntitledConfig> & { userId: string; storagePath: string; workspaceRoot: string }) {
-    this.config = { ...DEFAULT_CONFIG, ...config } as UntitledConfig;
-    const dbPath = path.join(this.config.storagePath, 'untitled.db');
-    this.db = new UntitledDatabase({ path: dbPath, userId: this.config.userId });
+  constructor(config: Partial<BlueMatterConfig> & { userId: string; storagePath: string; workspaceRoot: string }) {
+    this.config = { ...DEFAULT_CONFIG, ...config } as BlueMatterConfig;
+    const dbPath = path.join(this.config.storagePath, 'blue-matter.db');
+    this.db = new BlueMatterDatabase({ path: dbPath, userId: this.config.userId });
     this.pathValidator = new PathValidator(this.config.workspaceRoot);
     this.sanitizer = new InputSanitizer();
     this.indexer = new CodeIndexer(this.db, this.config.userId, this.config.indexing);
@@ -80,6 +80,7 @@ export class UntitledCore {
   async initialize(): Promise<void> {
     if (this.initialized) return;
     await this.db.open();
+    this.cache.evictOldEntries(2000);
     this.initialized = true;
   }
 
@@ -208,14 +209,14 @@ export class UntitledCore {
     };
   }
 
-  updateConfig(updates: Partial<UntitledConfig>): void {
+  updateConfig(updates: Partial<BlueMatterConfig>): void {
     Object.assign(this.config, updates);
     if (updates.apiKey && updates.aiProvider) {
       this.ai.setApiKey(updates.apiKey);
     }
   }
 
-  getConfig(): UntitledConfig {
+  getConfig(): BlueMatterConfig {
     return { ...this.config };
   }
 }

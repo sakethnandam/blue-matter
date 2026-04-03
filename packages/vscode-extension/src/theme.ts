@@ -1,11 +1,11 @@
 /**
- * Base theme for Untitled UI. All colors and layout tokens live here.
+ * Base theme for Blue Matter UI. All colors and layout tokens live here.
  * Import this module wherever UI is built so styles stay consistent.
  * PRD 6.2: theme is static data only; no user/AI content. CSP and sanitization unchanged.
  */
 
 /** Editable motto shown on the dashboard. Escape when injecting into HTML. */
-export const DASHBOARD_MOTTO = 'Your code is untitled until you master it.';
+export const DASHBOARD_MOTTO = 'Your code only matters when you understand it.';
 
 export const theme = {
   colors: {
