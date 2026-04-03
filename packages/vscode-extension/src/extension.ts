@@ -142,29 +142,6 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('bluematter.explainFile', async () => {
-      const editor = vscode.window.activeTextEditor;
-      if (!editor) {
-        vscode.window.showWarningMessage('Blue Matter: Open a file first.');
-        return;
-      }
-      statusBar.text = '$(sync~spin) Blue Matter: Explaining file...';
-      try {
-        const core = await getCore(context, workspaceRoot, storagePath, userId);
-        const filePath = editor.document.uri.fsPath;
-        const explanation = await core.explainFile(filePath);
-        const panel = getPanel(context);
-        panel.reveal();
-        panel.setExplanation(explanation, editor.document.getText(), filePath);
-        statusBar.text = '$(sparkle) Blue Matter: Ready';
-      } catch (err) {
-        statusBar.text = '$(sparkle) Blue Matter: Ready';
-        vscode.window.showErrorMessage(`Blue Matter: ${err instanceof Error ? err.message : String(err)}`);
-      }
-    })
-  );
-
-  context.subscriptions.push(
     vscode.commands.registerCommand('bluematter.addAnnotation', async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor) return;

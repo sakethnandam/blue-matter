@@ -88,7 +88,6 @@ export class ExplanationPanel {
   <div class="dashboard-body">
     <p class="dashboard-motto">${mottoEscaped}</p>
     <div class="dashboard-actions">
-      <a href="command:bluematter.explainFile" class="btn-primary">EXPLAIN FILE</a>
       <a href="command:bluematter.explainCode" class="btn-primary">EXPLAIN SELECTION</a>
     </div>
   </div>

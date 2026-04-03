@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "publisher": "blue-matter",
   "icon": "assets/blue-matter.png",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/sakethnandam/blue-matter"
@@ -32,10 +32,6 @@
       {
         "command": "bluematter.explainCode",
         "title": "Blue Matter: Explain Selected Code"
-      },
-      {
-        "command": "bluematter.explainFile",
-        "title": "Blue Matter: Explain Current File"
       },
       {
         "command": "bluematter.addAnnotation",
@@ -117,11 +113,6 @@
         "mac": "cmd+shift+e"
       },
       {
-        "command": "bluematter.explainFile",
-        "key": "ctrl+shift+alt+f",
-        "mac": "cmd+shift+alt+f"
-      },
-      {
         "command": "bluematter.addAnnotation",
         "key": "ctrl+shift+n",
         "mac": "cmd+shift+n"
@@ -144,7 +135,7 @@
     "@types/vscode": "^1.80.0",
     "@types/node": "^22.10.1",
     "@vscode/vsce": "^3.0.0",
-    "esbuild": "^0.24.0",
+    "esbuild": "^0.25.0",
     "typescript": "^5.7.2"
   }
 }
