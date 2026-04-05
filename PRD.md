@@ -4768,15 +4768,17 @@ Low Impact, High Effort (DO LAST):
 - Engineering Lead: [Contact Info]
 - Designer: [Contact Info]
 
+UPCOMING:
+
 **Resources:**
-- GitHub: https://github.com/untitled/core
+- GitHub: https://github.com/blue-matter/core
 - Documentation: https://docs.blue-matter.dev
 - Website: https://blue-matter.dev
 - Support: support@blue-matter.dev
 - Security: security@blue-matter.dev
 
 **Community:**
-- Discord: https://discord.gg/untitled
+- Discord: https://discord.gg/F4G3KzKz
 - Twitter: @bluematterdev
 - Newsletter: https://blue-matter.dev/newsletter
 
