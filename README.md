@@ -59,7 +59,7 @@ Other file types can still be explained; they just won't get repo-map context fr
 ## Project layout
 
 ```
-untitled/
+blue-matter/
 ├── PRD.md                    # Product requirements
 ├── packages/
 │   ├── core/                 # @blue-matter/core — indexer, cache, context, AI
