@@ -32,7 +32,7 @@ npm run test
 # Core package (most work happens here)
 cd packages/core
 npm run build       # TypeScript compile to dist/
-npm run test        # Jest 29 with ESM preset (89 tests)
+npm run test        # Jest 29 with ESM preset (96 tests)
 npm test -- --testPathPattern="InputSanitizer"  # Run a single test file
 
 # VS Code extension
@@ -124,7 +124,7 @@ Tests live in `packages/core/src/**/*.test.ts`. Coverage focuses on security-cri
 - `notebook/PyCellParser.test.ts` — symbol extraction, `# %%` boundary parsing, cell-at-line lookup
 - `notebook/NotebookContextBuilder.test.ts` — summary content, hash stability (comment changes must not change hash)
 
-All 89 tests must pass before merging. Run with `cd packages/core && npm test`.
+All 96 tests must pass before merging. Run with `cd packages/core && npm test`.
 
 ## ESM Notes
 

@@ -15,13 +15,13 @@ export interface PyCellBoundary {
   title?: string;
 }
 
-const MAX_PARSE_BYTES = 100_000;
+const MAX_PARSE_CHARS = 100_000;
 
 // Truncate oversized source, strip null bytes, and blank IPython magic lines
 // (%cmd, %%cmd, !cmd) so the Lezer parser sees valid Python.
 function blankMagicLines(source: string): string {
   return source
-    .slice(0, MAX_PARSE_BYTES)
+    .slice(0, MAX_PARSE_CHARS)
     .replaceAll('\0', '')
     .split('\n')
     .map((line) => {
@@ -66,7 +66,9 @@ function extractImport(node: SyntaxNode, source: string): string[] {
   //       a,
   //       b,
   //   )
-  const raw = getText(source, node).replaceAll(/\s+/g, ' ').replaceAll(/[()]/g, '').trim();
+  const raw = getText(source, node)
+    .split('\n').map((l) => l.replace(/#.*$/, '')).join('\n')
+    .replaceAll(/\s+/g, ' ').replaceAll(/[()]/g, '').trim();
 
   if (isFromImport) {
     const m = /^from\s+(\S+)\s+import\s+(.+)$/.exec(raw);

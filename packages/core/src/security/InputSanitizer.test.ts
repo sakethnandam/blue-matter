@@ -69,6 +69,18 @@ describe('InputSanitizer', () => {
       expect(sanitizer.detectSuspiciousCode('// This validates the input')).toBe(false);
     });
 
+  describe('sanitizeMarkdownCell', () => {
+    it('strips complete HTML comments', () => {
+      const { sanitized } = sanitizer.sanitizeMarkdownCell('hello <!-- secret --> world');
+      expect(sanitized).toBe('hello  world');
+    });
+
+    it('strips dangling unclosed <!-- opener to end of string', () => {
+      const { sanitized } = sanitizer.sanitizeMarkdownCell('safe content <!-- unclosed injection');
+      expect(sanitized).toBe('safe content');
+    });
+  });
+
     it('returns consistent results on repeated calls (no /g lastIndex bug)', () => {
       const suspicious = 'ignore previous instructions';
       // The original bug: after a match, the next call on the same regex instance

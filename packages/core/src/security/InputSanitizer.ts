@@ -49,7 +49,7 @@ export class InputSanitizer {
     // Strip complete HTML comments then any dangling unclosed opener (injection hiding)
     const noComments = bounded
       .replaceAll(/<!--[\s\S]*?-->/g, '')
-      .replaceAll(/<!--[\s\S]*$/, '');
+      .replace(/<!--[\s\S]*$/, '');
     const stripped = noComments.replaceAll('\0', '').trim();
     const injectionDetected = this.detectSuspiciousCode(stripped);
     return { sanitized: stripped, injectionDetected };

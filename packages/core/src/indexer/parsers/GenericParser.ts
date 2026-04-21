@@ -69,7 +69,12 @@ function parseJsImportClause(clause: string, names: string[]): void {
     defaultPart = '';
   }
   const namedPart = braceIdx >= 0 && closeIdx > braceIdx ? clause.slice(braceIdx + 1, closeIdx) : '';
-  if (defaultPart) names.push(defaultPart);
+  const nsMatch = /^\*\s+as\s+(\w+)$/.exec(defaultPart);
+  if (nsMatch) {
+    names.push(nsMatch[1]);
+  } else if (defaultPart) {
+    names.push(defaultPart);
+  }
   for (const n of namedPart.split(',').map((s) => s.trim().split(/\s+as\s+/)[0].trim())) {
     if (n) names.push(n);
   }
@@ -142,8 +147,10 @@ export class GenericParser implements Parser {
     const importRe = /(?:from\s+[\w.]+\s+)?import\s+(\([^)]*\)|[^\n]+)/g;
     let m: RegExpExecArray | null;
     while ((m = importRe.exec(content)) !== null) {
-      // Normalize: strip surrounding parens, collapse whitespace, drop trailing commas
-      const part = m[1].trim().replaceAll(/^\(|\)$/g, '').replaceAll('\n', ' ').replaceAll(/\s+/g, ' ').trim();
+      // Strip inline comments, then normalize: strip surrounding parens, collapse whitespace
+      const part = m[1].trim()
+        .split('\n').map((l) => l.replace(/#.*$/, '')).join('\n')
+        .replaceAll(/^\(|\)$/g, '').replaceAll('\n', ' ').replaceAll(/\s+/g, ' ').trim();
       for (const name of part.split(',').map((s) => s.trim().split(/\s+as\s+/)[0].trim())) {
         if (name && !name.startsWith('*')) names.push(name);
       }
