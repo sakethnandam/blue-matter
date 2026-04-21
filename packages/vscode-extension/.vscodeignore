@@ -5,6 +5,7 @@
 **
 
 # Bundled extension runtime
+!out/
 !out/extension.js
 !out/sql-wasm.wasm
 

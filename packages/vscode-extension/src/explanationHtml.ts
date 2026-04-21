@@ -36,8 +36,8 @@ function decodeHtmlEntities(s: string): string {
   while (prev !== s) {
     prev = s;
     s = s
-      .replaceAll(/&#(\d+);/g, (_, dec) => { const cp = Number.parseInt(dec, 10); return cp >= 0 && cp <= 0x10FFFF ? String.fromCodePoint(cp) : ''; })
-      .replaceAll(/&#x([0-9a-fA-F]+);/g, (_, hex) => { const cp = Number.parseInt(hex, 16); return cp >= 0 && cp <= 0x10FFFF ? String.fromCodePoint(cp) : ''; })
+      .replaceAll(/&#(\d+);/g, (_, dec) => { const cp = Number.parseInt(dec, 10); return cp >= 0 && cp <= 0x10FFFF && (cp < 0xD800 || cp > 0xDFFF) ? String.fromCodePoint(cp) : ''; })
+      .replaceAll(/&#x([0-9a-fA-F]+);/g, (_, hex) => { const cp = Number.parseInt(hex, 16); return cp >= 0 && cp <= 0x10FFFF && (cp < 0xD800 || cp > 0xDFFF) ? String.fromCodePoint(cp) : ''; })
       .replaceAll('&amp;', '&')
       .replaceAll('&lt;', '<')
       .replaceAll('&gt;', '>')

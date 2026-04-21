@@ -88,7 +88,7 @@ No debug mode, no terminal. It activates automatically on every VS Code launch a
 
 Run through this before building the `.vsix`:
 
-- [ ] `cd packages/core && npm test` — all 89 tests pass
+- [ ] `cd packages/core && npm test` — all 96 tests pass
 - [ ] `cd packages/vscode-extension && npm run compile` — 0 TypeScript errors
 - [ ] `npm run bundle` — builds cleanly (the one `[WARNING]` about `types` is harmless)
 - [ ] Publisher ID `blue-matter` is registered and matches `package.json`

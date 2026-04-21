@@ -145,6 +145,7 @@ function buildHeaderHtml(iconUri: string): string {
 
 function escapeHtml(s: string): string {
   return s
+    .replaceAll('\0', '')
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')

@@ -68,13 +68,14 @@ type CodeLensResolveResult =
 
 /** Resolve selection from CodeLens arguments; returns error string on invalid input. */
 async function tryCodeLensResolve(uriStringArg: string, rangeArg: unknown): Promise<CodeLensResolveResult> {
-  if (!uriStringArg.trim()) return { ok: false, error: 'Blue Matter: Invalid document.' };
-  const parsedUri = vscode.Uri.parse(uriStringArg);
+  const safeUri = uriStringArg.replaceAll('\0', '');
+  if (!safeUri.trim()) return { ok: false, error: 'Blue Matter: Invalid document.' };
+  const parsedUri = vscode.Uri.parse(safeUri);
   if (!(ALLOWED_SCHEMES as readonly string[]).includes(parsedUri.scheme)) {
     return { ok: false, error: 'Blue Matter: Document is not in the workspace.' };
   }
   if (!isValidRangeArg(rangeArg)) return { ok: false, error: 'Blue Matter: Invalid selection.' };
-  const result = await resolveFromArgs(uriStringArg, rangeArgToRangeObj(rangeArg));
+  const result = await resolveFromArgs(safeUri, rangeArgToRangeObj(rangeArg));
   return { ok: true, result };
 }
 

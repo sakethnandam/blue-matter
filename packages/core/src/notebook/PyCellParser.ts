@@ -74,7 +74,11 @@ function extractImport(node: SyntaxNode, source: string): string[] {
     const mod = m[1];
     const names = m[2]
       .split(',')
-      .map((n) => n.trim().split(/\s+as\s+/)[0].trim())
+      .map((n) => {
+        const t = n.trim();
+        const parts = t.split(/\s+as\s+/);
+        return parts.length === 2 ? `${parts[0].trim()} as ${parts[1].trim()}` : t;
+      })
       .filter(Boolean);
     return names.length ? [`${names.join(', ')} from ${mod}`] : [];
   }

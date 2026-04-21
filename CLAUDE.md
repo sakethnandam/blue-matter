@@ -76,7 +76,7 @@ packages/
 | `core/src/security/PathValidator.ts` | Traversal prevention, symlink-safe prefix check |
 | `core/src/cache/ExplanationCache.ts` | Content-addressed cache keyed by SHA-256 |
 | `core/src/storage/Database.ts` | SQLite via sql.js (WASM, no native bindings) |
-| `core/src/notebook/PyCellParser.ts` | Regex-based symbol extractor for Python cells; `# %%` boundary parser |
+| `core/src/notebook/PyCellParser.ts` | AST-based symbol extractor for Python cells using `@lezer/python`; `# %%` boundary parser |
 | `core/src/notebook/NotebookContextBuilder.ts` | Builds compact dependency summary from preceding cells; produces cache-stable hash |
 | `vscode-extension/src/extension.ts` | Activation, 10 command registrations, status bar |
 | `vscode-extension/src/documentResolver.ts` | Normalizes file vs. notebook cell selection; builds `NotebookCellContext` for VS Code |
