@@ -2,6 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ Security Requirement — Mandatory for Every Change
+
+**Before marking any task complete, run a security audit on all new and modified code.**
+
+Check every changed file for:
+
+1. **Unsanitized input entering AI prompts** — all user-derived text must go through `InputSanitizer` before being interpolated into a prompt. The notebook summary, repo map, and code all have distinct sanitizer methods; use the right one for each path. Adding a new field to a prompt? Sanitize it first.
+2. **Missing size caps** — user-controlled strings fed to parsers, stored, or logged must be truncated. The ceiling is `100_000` chars for code and `10_000` for annotations/summaries (matching `InputSanitizer`).
+3. **Null-byte stripping** — any string from an external source (VS Code API, file system, AI response) must have null bytes removed before use.
+4. **Regex `/g` flag on shared objects** — never add `/g` to a regex that is a class-level or module-level constant and then call `.test()` or `.exec()` on it in a loop or across calls. `lastIndex` state causes false negatives. See `InputSanitizer.SUSPICIOUS_PATTERNS` for the canonical example of the correct pattern.
+5. **Path traversal** — any file path from user input must go through `PathValidator.validatePath()` before any file I/O.
+6. **New prompt interpolations** — if you add `${someVar}` to a prompt string, that var must be sanitized. Grep for bare `${` in `PromptBuilder.ts` after any change.
+
+If you find a vulnerability: fix it in the same commit as the feature. Do not defer security fixes.
+
 ## Commands
 
 ```bash

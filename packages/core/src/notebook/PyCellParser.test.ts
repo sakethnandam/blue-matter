@@ -4,7 +4,7 @@ import { PyCellParser } from './PyCellParser.js';
 const parser = new PyCellParser();
 
 // ---------------------------------------------------------------------------
-// extractSymbols
+// extractSymbols — basic cases (preserved from original test suite)
 // ---------------------------------------------------------------------------
 
 describe('PyCellParser.extractSymbols', () => {
@@ -57,7 +57,6 @@ describe('PyCellParser.extractSymbols', () => {
     const src = '%matplotlib inline\n!pip install sklearn\n%%timeit\nimport os';
     const { imports } = parser.extractSymbols(src);
     expect(imports).toContain('os');
-    // Magic lines should not appear as imports or variables
     expect(imports.join('')).not.toContain('matplotlib');
   });
 
@@ -73,6 +72,66 @@ describe('PyCellParser.extractSymbols', () => {
     expect(sym.variables).toEqual([]);
     expect(sym.functions).toEqual([]);
     expect(sym.classes).toEqual([]);
+  });
+
+  // -------------------------------------------------------------------------
+  // AST upgrade — patterns that regex could not handle
+  // -------------------------------------------------------------------------
+
+  it('extracts multi-line parenthesized from-imports', () => {
+    const src = [
+      'from sklearn.model_selection import (',
+      '    train_test_split,',
+      '    cross_val_score,',
+      '    GridSearchCV,',
+      ')',
+    ].join('\n');
+    const { imports } = parser.extractSymbols(src);
+    expect(imports).toHaveLength(1);
+    expect(imports[0]).toContain('train_test_split');
+    expect(imports[0]).toContain('cross_val_score');
+    expect(imports[0]).toContain('GridSearchCV');
+    expect(imports[0]).toContain('from sklearn.model_selection');
+  });
+
+  it('extracts type-annotated variable assignments', () => {
+    const src = 'x: int = 5\nname: str = "alice"';
+    const { variables } = parser.extractSymbols(src);
+    expect(variables).toContain('x');
+    expect(variables).toContain('name');
+  });
+
+  it('extracts decorated function definitions', () => {
+    const src = '@staticmethod\ndef helper(x):\n    return x * 2';
+    const { functions } = parser.extractSymbols(src);
+    expect(functions).toContain('helper');
+  });
+
+  it('extracts decorated class definitions', () => {
+    const src = '@dataclass\nclass Point:\n    x: float\n    y: float';
+    const { classes } = parser.extractSymbols(src);
+    expect(classes).toContain('Point');
+  });
+
+  it('extracts tuple-unpacking assignment targets', () => {
+    const src = 'x, y = compute_coords()';
+    const { variables } = parser.extractSymbols(src);
+    expect(variables).toContain('x');
+    expect(variables).toContain('y');
+  });
+
+  it('extracts starred unpacking targets', () => {
+    const src = 'first, *rest, last = items';
+    const { variables } = parser.extractSymbols(src);
+    expect(variables).toContain('first');
+    expect(variables).toContain('rest');
+    expect(variables).toContain('last');
+  });
+
+  it('does not extract augmented assignment targets', () => {
+    const src = 'counter += 1';
+    const { variables } = parser.extractSymbols(src);
+    expect(variables).not.toContain('counter');
   });
 });
 
@@ -90,7 +149,6 @@ describe('PyCellParser.isCellModeFile', () => {
   });
 
   it('requires # %% at column 0', () => {
-    // Indented marker should NOT trigger cell mode
     expect(parser.isCellModeFile('    # %%\nx = 1')).toBe(false);
   });
 });

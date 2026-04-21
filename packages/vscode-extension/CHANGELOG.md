@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.0] - 2026-04-20
+
+### Improved
+- **More accurate Python context** — symbol extraction for Jupyter notebooks and `# %%` Python cell-mode files now uses a full AST parser (`@lezer/python`) instead of regex. Multi-line imports, type-annotated variables, decorated classes/functions, and starred unpacking assignments are now correctly captured and included in cross-cell context.
+- **More accurate AI explanations** — AI calls now use `temperature: 0`, eliminating non-deterministic responses. The model consistently picks the highest-confidence interpretation of code rather than sampling randomly, which was the cause of occasional factually wrong explanations on first load.
+
+### Fixed
+- Preceding notebook cells were passed to the Python parser without a size cap or null-byte stripping. They are now pre-processed consistently with the selected cell (100 KB cap, null bytes removed).
+- Notebook dependency summary was embedded in AI prompts without sanitization. It now goes through the same `sanitizeAnnotation` pass used for the repo map.
+
 ## [0.1.0] - 2026-04-03
 
 ### Added
