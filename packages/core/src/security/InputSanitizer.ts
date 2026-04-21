@@ -19,12 +19,12 @@ export class InputSanitizer {
   sanitizeCode(code: string): string {
     if (typeof code !== 'string') return '';
     // Strip null bytes before returning (can be used to confuse downstream parsers)
-    return code.slice(0, 100_000).replace(/\0/g, '').trim();
+    return code.slice(0, 100_000).replaceAll('\0', '').trim();
   }
 
   sanitizeAnnotation(text: string): string {
     if (typeof text !== 'string') return '';
-    return text.slice(0, 10_000).replace(/\0/g, '').trim();
+    return text.slice(0, 10_000).replaceAll('\0', '').trim();
   }
 
   /** Returns true if code may contain prompt injection attempts */
@@ -46,9 +46,9 @@ export class InputSanitizer {
     if (typeof markdown !== 'string') return { sanitized: '', injectionDetected: false };
     // Strip HTML comments first — they can hide injection payloads from UI display
     const stripped = markdown
-      .replace(/<!--[\s\S]*?-->/g, '')
+      .replaceAll(/<!--[\s\S]*?-->/g, '')
       .slice(0, 10_000)
-      .replace(/\0/g, '')
+      .replaceAll('\0', '')
       .trim();
     const injectionDetected = this.detectSuspiciousCode(stripped);
     return { sanitized: stripped, injectionDetected };

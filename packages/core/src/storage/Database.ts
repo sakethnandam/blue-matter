@@ -12,6 +12,7 @@ export interface DatabaseConfig {
 }
 
 type SqlJsDatabase = import('sql.js').Database;
+type SqlParam = string | number | null;
 
 export class BlueMatterDatabase {
   private db: SqlJsDatabase | null = null;
@@ -85,7 +86,7 @@ export class BlueMatterDatabase {
     const db = this.ensureOpen();
     const stmt = db.prepare(sql);
     try {
-      stmt.bind(params as (string | number | null)[]);
+      stmt.bind(params as SqlParam[]);
       stmt.step();
       const changes = db.getRowsModified();
       const rowidResult = db.exec('SELECT last_insert_rowid() as lastInsertRowid');
@@ -102,7 +103,7 @@ export class BlueMatterDatabase {
     const db = this.ensureOpen();
     const stmt = db.prepare(sql);
     try {
-      stmt.bind(params as (string | number | null)[]);
+      stmt.bind(params as SqlParam[]);
       if (!stmt.step()) return undefined;
       return stmt.getAsObject() as T;
     } finally {
@@ -114,7 +115,7 @@ export class BlueMatterDatabase {
     const db = this.ensureOpen();
     const stmt = db.prepare(sql);
     try {
-      stmt.bind(params as (string | number | null)[]);
+      stmt.bind(params as SqlParam[]);
       const rows: T[] = [];
       while (stmt.step()) {
         rows.push(stmt.getAsObject() as T);

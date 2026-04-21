@@ -22,7 +22,7 @@ const MAX_PARSE_BYTES = 100_000;
 function blankMagicLines(source: string): string {
   return source
     .slice(0, MAX_PARSE_BYTES)
-    .replace(/\0/g, '')
+    .replaceAll('\0', '')
     .split('\n')
     .map((line) => {
       const t = line.trimStart();
@@ -66,7 +66,7 @@ function extractImport(node: SyntaxNode, source: string): string[] {
   //       a,
   //       b,
   //   )
-  const raw = getText(source, node).replace(/\s+/g, ' ').replace(/[()]/g, '').trim();
+  const raw = getText(source, node).replaceAll(/\s+/g, ' ').replaceAll(/[()]/g, '').trim();
 
   if (isFromImport) {
     const m = /^from\s+(\S+)\s+import\s+(.+)$/.exec(raw);
@@ -85,6 +85,26 @@ function extractImport(node: SyntaxNode, source: string): string[] {
     .split(',')
     .map((p) => p.trim())
     .filter(Boolean);
+}
+
+// Walk a DecoratedStatement's children for a wrapped FunctionDefinition or ClassDefinition.
+function extractDecoratedStatement(
+  stmt: SyntaxNode,
+  source: string,
+  functions: string[],
+  classes: string[]
+): void {
+  let c: SyntaxNode | null = stmt.firstChild;
+  while (c) {
+    if (c.type.name === 'FunctionDefinition') {
+      const name = extractFunctionName(c, source);
+      if (name) functions.push(name);
+    } else if (c.type.name === 'ClassDefinition') {
+      const name = extractClassName(c, source);
+      if (name) classes.push(name);
+    }
+    c = c.nextSibling;
+  }
 }
 
 // Collect variable names from an AssignStatement target side (before the first AssignOp).
@@ -140,21 +160,9 @@ export class PyCellParser {
           variables.push(...extractAssignTargets(stmt, processed));
           break;
 
-        case 'DecoratedStatement': {
-          // @decorator\ndef foo() or @decorator\nclass Foo
-          let c: SyntaxNode | null = stmt.firstChild;
-          while (c) {
-            if (c.type.name === 'FunctionDefinition') {
-              const name = extractFunctionName(c, processed);
-              if (name) functions.push(name);
-            } else if (c.type.name === 'ClassDefinition') {
-              const name = extractClassName(c, processed);
-              if (name) classes.push(name);
-            }
-            c = c.nextSibling;
-          }
+        case 'DecoratedStatement':
+          extractDecoratedStatement(stmt, processed, functions, classes);
           break;
-        }
       }
       stmt = stmt.nextSibling;
     }

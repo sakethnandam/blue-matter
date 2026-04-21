@@ -80,7 +80,7 @@ export class GenericParser implements Parser {
     const lang = detectLanguage(effectivePath);
     const patterns = lang === 'python' ? PYTHON_PATTERNS : JS_TS_PATTERNS;
     const symbols: ReturnType<typeof createSymbol>[] = [];
-    const relativePath = filePath.replace(/\\/g, '/'); // keep original path for storage
+    const relativePath = filePath.replaceAll('\\', '/'); // keep original path for storage
 
     for (const type of ['function', 'class'] as const) {
       for (const { name, lineStart, lineEnd } of extractWithPatterns(content, patterns, type)) {
@@ -110,29 +110,42 @@ export class GenericParser implements Parser {
   }
 
   private extractImports(content: string, lang: string): string[] {
+    return lang === 'python'
+      ? this.extractPythonImports(content)
+      : this.extractJsImports(content);
+  }
+
+  private extractPythonImports(content: string): string[] {
     const names: string[] = [];
-    if (lang === 'python') {
-      const importRe = /(?:from\s+[\w.]+\s+)?import\s+(.+)/g;
-      let m: RegExpExecArray | null;
-      while ((m = importRe.exec(content)) !== null) {
-        const part = m[1].replace(/\s+as\s+\w+/, '').trim();
-        for (const name of part.split(',').map((s) => s.trim().split(/\s+as\s+/)[0])) {
-          if (name && !name.startsWith('*')) names.push(name);
-        }
-      }
-    } else {
-      const importRe = /import\s+(?:\{([^}]+)\}|(\w+)|(\w+)\s+as\s+\w+)\s+from\s+['"][^'"]+['"]/g;
-      let m: RegExpExecArray | null;
-      while ((m = importRe.exec(content)) !== null) {
-        const named = m[1];
-        const defaultName = m[2];
-        if (named) {
-          for (const n of named.split(',').map((s) => s.trim().split(/\s+as\s+/)[0].trim())) {
-            if (n) names.push(n);
-          }
-        } else if (defaultName) names.push(defaultName);
+    const importRe = /(?:from\s+[\w.]+\s+)?import\s+(.+)/g;
+    let m: RegExpExecArray | null;
+    while ((m = importRe.exec(content)) !== null) {
+      const part = m[1].replace(/\s+as\s+\w+/, '').trim();
+      for (const name of part.split(',').map((s) => s.trim().split(/\s+as\s+/)[0])) {
+        if (name && !name.startsWith('*')) names.push(name);
       }
     }
+    return names;
+  }
+
+  private extractJsImports(content: string): string[] {
+    const names: string[] = [];
+    let m: RegExpExecArray | null;
+
+    // Named imports: import { foo, bar as b } from '...'
+    const namedRe = /import\s*\{([^}]+)\}\s*from\s*['"][^'"]+['"]/g;
+    while ((m = namedRe.exec(content)) !== null) {
+      for (const n of m[1].split(',').map((s) => s.trim().split(/\s+as\s+/)[0].trim())) {
+        if (n) names.push(n);
+      }
+    }
+
+    // Default imports: import Foo from '...'
+    const defaultRe = /import\s+(\w+)\s+from\s*['"][^'"]+['"]/g;
+    while ((m = defaultRe.exec(content)) !== null) {
+      if (m[1]) names.push(m[1]);
+    }
+
     return names;
   }
 }

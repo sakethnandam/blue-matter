@@ -14,9 +14,7 @@ let panelRef: ExplanationPanel | null = null;
 const WEBVIEW_CSP = "default-src 'none'; style-src 'unsafe-inline'; font-src 'self' vscode-resource: https:; img-src 'self' vscode-resource: https:; script-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none';";
 
 export function getPanel(context: vscode.ExtensionContext): ExplanationPanel {
-  if (!panelRef) {
-    panelRef = new ExplanationPanel(context);
-  }
+  panelRef ??= new ExplanationPanel(context);
   return panelRef;
 }
 
@@ -78,7 +76,7 @@ export class ExplanationPanel {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="${WEBVIEW_CSP.replace(/"/g, '&quot;')}">
+  <meta http-equiv="Content-Security-Policy" content="${WEBVIEW_CSP.replaceAll('"', '&quot;')}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Blue Matter</title>
   <style>${getPanelStyles()}</style>
@@ -117,7 +115,7 @@ export class ExplanationPanel {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="${WEBVIEW_CSP.replace(/"/g, '&quot;')}">
+  <meta http-equiv="Content-Security-Policy" content="${WEBVIEW_CSP.replaceAll('"', '&quot;')}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Blue Matter</title>
   <style>${getPanelStyles()}</style>
@@ -147,9 +145,9 @@ function buildHeaderHtml(iconUri: string): string {
 
 function escapeHtml(s: string): string {
   return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 }
