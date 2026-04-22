@@ -53,8 +53,11 @@ function decodeHtmlEntities(s: string): string {
  * Href is decoded before protocol check so entity-encoded schemes cannot bypass (PRD 6.2).
  */
 function sanitizeHtml(html: string): string {
-  // Strip HTML comments first to prevent parser differential attacks
-  const noComments = html.replaceAll(/<!--[\s\S]*?-->/g, '');
+  // Strip HTML comments first to prevent parser differential attacks; also strip any
+  // dangling unclosed opener so '<!-- injection' cannot reach the webview.
+  const noComments = html
+    .replaceAll(/<!--[\s\S]*?-->/g, '')
+    .replace(/<!--[\s\S]*$/, '');
   const out = noComments.replaceAll(/<\/?([a-zA-Z0-9]+)(\s[^>]*)?\/?>/g, (full, tagName) => {
     const name = tagName.toLowerCase();
     if (!ALLOWED_TAGS.has(name)) return '';
