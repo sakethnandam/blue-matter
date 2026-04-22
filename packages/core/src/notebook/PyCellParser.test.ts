@@ -81,7 +81,7 @@ describe('PyCellParser.extractSymbols', () => {
   it('extracts multi-line parenthesized from-imports', () => {
     const src = [
       'from sklearn.model_selection import (',
-      '    train_test_split,',
+      '    train_test_split,  # comment',
       '    cross_val_score,',
       '    GridSearchCV,',
       ')',
@@ -92,6 +92,8 @@ describe('PyCellParser.extractSymbols', () => {
     expect(imports[0]).toContain('cross_val_score');
     expect(imports[0]).toContain('GridSearchCV');
     expect(imports[0]).toContain('from sklearn.model_selection');
+    expect(imports[0]).not.toContain('# comment');
+    expect(imports[0]).not.toContain('comment');
   });
 
   it('extracts type-annotated variable assignments', () => {

@@ -47,7 +47,11 @@ export class PromptBuilder {
     let userPrompt: string;
 
     if (notebookContext?.summary) {
-      const sanitizedSummary = this.sanitizer.sanitizeAnnotation(notebookContext.summary);
+      const { sanitized: sanitizedSummary, injectionDetected: summaryInjection } =
+        this.sanitizer.sanitizeMarkdownCell(notebookContext.summary);
+      if (summaryInjection) {
+        this.logger.warn('Potential prompt injection detected in notebook context summary');
+      }
       userPrompt = `Repository Context (REFERENCE ONLY - use to understand how this code fits in):
 ${sanitizedContext}
 
@@ -100,8 +104,10 @@ Describe what this documentation explains. If it contains code examples, explain
   }
 
   private sanitizeContext(context: RepoContext): string {
-    // Pass repo map through annotation sanitizer to strip oversized/suspicious content, then truncate
-    const cleaned = this.sanitizer.sanitizeAnnotation(context.repoMap);
-    return cleaned.slice(0, 4000);
+    const { sanitized, injectionDetected } = this.sanitizer.sanitizeMarkdownCell(context.repoMap);
+    if (injectionDetected) {
+      this.logger.warn('Potential prompt injection detected in repo map');
+    }
+    return sanitized.slice(0, 4000);
   }
 }

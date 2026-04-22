@@ -143,10 +143,14 @@ export class GenericParser implements Parser {
 
   private extractPythonImports(content: string): string[] {
     const names: string[] = [];
+    // Mask triple-quoted strings so imports inside them are not extracted
+    let preprocessed = content.replaceAll(/"""[\s\S]*?"""|'''[\s\S]*?'''/g, '""');
+    // Join backslash line-continuations so multi-line bare imports are captured
+    preprocessed = preprocessed.replaceAll('\\\n', ' ');
     // Capture parenthesized block (spans newlines via [^)]*) or rest of line
     const importRe = /(?:from\s+[\w.]+\s+)?import\s+(\([^)]*\)|[^\n]+)/g;
     let m: RegExpExecArray | null;
-    while ((m = importRe.exec(content)) !== null) {
+    while ((m = importRe.exec(preprocessed)) !== null) {
       // Strip inline comments, then normalize: strip surrounding parens, collapse whitespace
       const part = m[1].trim()
         .split('\n').map((l) => l.replace(/#.*$/, '')).join('\n')

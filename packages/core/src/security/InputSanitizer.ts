@@ -44,13 +44,13 @@ export class InputSanitizer {
    */
   sanitizeMarkdownCell(markdown: string): { sanitized: string; injectionDetected: boolean } {
     if (typeof markdown !== 'string') return { sanitized: '', injectionDetected: false };
-    // Bound first so comment-stripping regex never runs on multi-MB input
-    const bounded = markdown.slice(0, 10_000);
+    // Bound first, then strip null bytes so "<!\0-- -->" cannot evade the comment regex
+    const bounded = markdown.slice(0, 10_000).replaceAll('\0', '');
     // Strip complete HTML comments then any dangling unclosed opener (injection hiding)
     const noComments = bounded
       .replaceAll(/<!--[\s\S]*?-->/g, '')
       .replace(/<!--[\s\S]*$/, '');
-    const stripped = noComments.replaceAll('\0', '').trim();
+    const stripped = noComments.trim();
     const injectionDetected = this.detectSuspiciousCode(stripped);
     return { sanitized: stripped, injectionDetected };
   }

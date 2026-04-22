@@ -61,7 +61,7 @@ async function resolveApiKey(context: vscode.ExtensionContext): Promise<string> 
   }
 
   const fromEnv = process.env.OPENROUTER_API_KEY?.trim();
-  return fromEnv || '';
+  return (fromEnv && isValidApiKeyFormat(fromEnv)) ? fromEnv : '';
 }
 
 /** Returns true if a key is available from SecretStorage or env (no migration). */
@@ -69,7 +69,7 @@ export async function hasStoredApiKey(context: vscode.ExtensionContext): Promise
   const fromSecrets = await context.secrets.get(BLUE_MATTER_API_KEY_SECRET);
   if (fromSecrets && isValidApiKeyFormat(fromSecrets)) return true;
   const fromEnv = process.env.OPENROUTER_API_KEY?.trim();
-  return !!fromEnv;
+  return !!(fromEnv && isValidApiKeyFormat(fromEnv));
 }
 
 /** Prompt user to enter Open Router API key; store in SecretStorage only (PRD: OS keychain). */

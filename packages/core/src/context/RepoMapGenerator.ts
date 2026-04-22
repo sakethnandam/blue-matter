@@ -31,8 +31,9 @@ export function generateRepoMap(
     }
   }
   if (currentFilePath) {
-    lines.push('', `Current file: ${currentFilePath}`);
-    const currentSymbols = symbols.filter((s) => s.filePath === currentFilePath);
+    const cleanPath = currentFilePath.replaceAll('\0', '');
+    lines.push('', `Current file: ${cleanPath}`);
+    const currentSymbols = symbols.filter((s) => s.filePath === cleanPath);
     if (currentSymbols.length) {
       const symbolList = currentSymbols.map((s) => `${s.name} (${s.type})`).join(', ');
       lines.push(`Symbols: ${symbolList}`);

@@ -90,7 +90,8 @@ function sanitizeHtml(html: string): string {
  */
 export function markdownToSafeHtml(text: string): string {
   if (typeof text !== 'string') return '';
-  const raw = marked.parse(text, {
+  const cleanedText = text.replaceAll('\0', '');
+  const raw = marked.parse(cleanedText, {
     async: false,
     gfm: true,
     breaks: true,

@@ -26,7 +26,7 @@ function blankMagicLines(source: string): string {
     .split('\n')
     .map((line) => {
       const t = line.trimStart();
-      return t.startsWith('%') || t.startsWith('!') ? '' : line;
+      return /^%%?\s*\w/.test(t) || /^!\s*\w/.test(t) ? '' : line;
     })
     .join('\n');
 }
