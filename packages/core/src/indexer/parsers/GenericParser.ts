@@ -75,7 +75,9 @@ function parseJsImportClause(clause: string, names: string[]): void {
   } else if (defaultPart) {
     names.push(defaultPart);
   }
-  for (const n of namedPart.split(',').map((s) => s.trim().split(/\s+as\s+/)[0].trim())) {
+  for (const spec of namedPart.split(',').map((s) => s.trim())) {
+    if (!spec || /^type\s+/.test(spec)) continue;
+    const n = spec.split(/\s+as\s+/)[0].trim();
     if (n) names.push(n);
   }
 }
