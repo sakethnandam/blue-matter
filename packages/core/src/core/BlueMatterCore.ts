@@ -4,8 +4,7 @@
 
 import type { Explanation } from '../models/Explanation.js';
 import type { Symbol } from '../models/Symbol.js';
-import type { RepoContext } from '../models/Context.js';
-import type { NotebookCellContext } from '../models/Context.js';
+import type { RepoContext, NotebookCellContext } from '../models/Context.js';
 import type { BlueMatterConfig } from '../models/Config.js';
 import { DEFAULT_CONFIG } from '../models/Config.js';
 import { createExplanation } from '../models/Explanation.js';
@@ -59,18 +58,18 @@ export interface UsageStats {
 
 export class BlueMatterCore {
   private readonly config: BlueMatterConfig;
-  private db: BlueMatterDatabase;
-  private indexer: CodeIndexer;
-  private cache: ExplanationCache;
-  private contextBuilder: ContextBuilder;
-  private ai: AIOrchestrator;
-  private annotations: AnnotationManager;
-  private pathValidator: PathValidator;
-  private sanitizer: InputSanitizer;
-  private notebookBuilder: NotebookContextBuilder;
+  private readonly db: BlueMatterDatabase;
+  private readonly indexer: CodeIndexer;
+  private readonly cache: ExplanationCache;
+  private readonly contextBuilder: ContextBuilder;
+  private readonly ai: AIOrchestrator;
+  private readonly annotations: AnnotationManager;
+  private readonly pathValidator: PathValidator;
+  private readonly sanitizer: InputSanitizer;
+  private readonly notebookBuilder: NotebookContextBuilder;
   private readonly logger = createLogger();
   private initialized = false;
-  private usageCount = { ai: 0, cache: 0 };
+  private readonly usageCount = { ai: 0, cache: 0 };
 
   constructor(config: Partial<BlueMatterConfig> & { userId: string; storagePath: string; workspaceRoot: string }) {
     this.config = { ...DEFAULT_CONFIG, ...config } as BlueMatterConfig;
@@ -161,9 +160,9 @@ export class BlueMatterCore {
 
     // Defense in depth: redact any credential-like patterns the AI may have echoed back
     const safeText = this.sanitizer.sanitizeAIResponse(explanation.text);
-    const final = safeText !== explanation.text
-      ? createExplanation({ ...explanation, text: safeText })
-      : explanation;
+    const final = safeText === explanation.text
+      ? explanation
+      : createExplanation({ ...explanation, text: safeText });
 
     this.cache.set(final);
     return final;
@@ -223,9 +222,9 @@ export class BlueMatterCore {
     this.usageCount.ai++;
 
     const safeText = this.sanitizer.sanitizeAIResponse(explanation.text);
-    const final = safeText !== explanation.text
-      ? createExplanation({ ...explanation, text: safeText })
-      : explanation;
+    const final = safeText === explanation.text
+      ? explanation
+      : createExplanation({ ...explanation, text: safeText });
 
     this.cache.set(final);
     return final;
@@ -254,7 +253,7 @@ export class BlueMatterCore {
   async explainSymbol(symbolName: string, filePath: string): Promise<Explanation | null> {
     await this.initialize();
     const sym = this.indexer.findSymbol(symbolName);
-    if (!sym || sym.filePath !== filePath) return null;
+    if (sym?.filePath !== filePath) return null;
     return this.explainCode(sym.definition, { filePath: sym.filePath, language: sym.metadata?.language });
   }
 

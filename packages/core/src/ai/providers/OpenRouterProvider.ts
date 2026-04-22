@@ -72,6 +72,7 @@ export class OpenRouterProvider {
         body: JSON.stringify({
           model,
           max_tokens: this.maxTokens,
+          temperature: 0,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt },

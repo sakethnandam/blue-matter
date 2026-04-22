@@ -1,9 +1,5 @@
-/**
- * PyCellParser — regex-based symbol extraction from Python cells and # %% boundary parsing.
- *
- * Tolerant of incomplete / IPython-magic-heavy notebook code.
- * Does NOT perform full AST parsing — designed to be fast (< 1ms per cell).
- */
+import { parser as pythonParser } from '@lezer/python';
+import type { SyntaxNode } from '@lezer/common';
 
 export interface CellSymbols {
   imports: string[];
@@ -19,70 +15,162 @@ export interface PyCellBoundary {
   title?: string;
 }
 
+const MAX_PARSE_CHARS = 100_000;
+
+// Truncate oversized source, strip null bytes, and blank IPython magic lines
+// (%cmd, %%cmd, !cmd) so the Lezer parser sees valid Python.
+function blankMagicLines(source: string): string {
+  return source
+    .slice(0, MAX_PARSE_CHARS)
+    .replaceAll('\0', '')
+    .split('\n')
+    .map((line) => {
+      const t = line.trimStart();
+      return /^%%?\s*\w/.test(t) || /^!\s*\w/.test(t) ? '' : line;
+    })
+    .join('\n');
+}
+
+function getText(source: string, node: SyntaxNode): string {
+  return source.slice(node.from, node.to);
+}
+
+function firstChildNamed(node: SyntaxNode, name: string): SyntaxNode | null {
+  let c: SyntaxNode | null = node.firstChild;
+  while (c) {
+    if (c.type.name === name) return c;
+    c = c.nextSibling;
+  }
+  return null;
+}
+
+function extractFunctionName(node: SyntaxNode, source: string): string | null {
+  // FunctionDefinition children: [async?] def VariableName ParamList Body
+  const nameNode = firstChildNamed(node, 'VariableName');
+  return nameNode ? getText(source, nameNode) : null;
+}
+
+function extractClassName(node: SyntaxNode, source: string): string | null {
+  // ClassDefinition children: class VariableName [ArgList] Body
+  const nameNode = firstChildNamed(node, 'VariableName');
+  return nameNode ? getText(source, nameNode) : null;
+}
+
+function extractImport(node: SyntaxNode, source: string): string[] {
+  // Both "import x" and "from x import y" share the ImportStatement node.
+  // Distinguish via a leading "from" keyword child.
+  const isFromImport = node.firstChild?.type.name === 'from';
+
+  // Normalize whitespace and strip parens to handle multi-line imports:
+  //   from x import (
+  //       a,
+  //       b,
+  //   )
+  const raw = getText(source, node)
+    .split('\n').map((l) => l.replace(/#.*$/, '')).join('\n')
+    .replaceAll(/\s+/g, ' ').replaceAll(/[()]/g, '').trim();
+
+  if (isFromImport) {
+    const m = /^from\s+(\S+)\s+import\s+(.+)$/.exec(raw);
+    if (!m) return [];
+    const mod = m[1];
+    const names = m[2]
+      .split(',')
+      .map((n) => {
+        const t = n.trim();
+        const parts = t.split(/\s+as\s+/);
+        return parts.length === 2 ? `${parts[0].trim()} as ${parts[1].trim()}` : t;
+      })
+      .filter(Boolean);
+    return names.length ? [`${names.join(', ')} from ${mod}`] : [];
+  }
+
+  // "import os" or "import os as o, sys"
+  const withoutKeyword = raw.replace(/^import\s+/, '');
+  return withoutKeyword
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean);
+}
+
+// Walk a DecoratedStatement's children for a wrapped FunctionDefinition or ClassDefinition.
+function extractDecoratedStatement(
+  stmt: SyntaxNode,
+  source: string,
+  functions: string[],
+  classes: string[]
+): void {
+  let c: SyntaxNode | null = stmt.firstChild;
+  while (c) {
+    if (c.type.name === 'FunctionDefinition') {
+      const name = extractFunctionName(c, source);
+      if (name) functions.push(name);
+    } else if (c.type.name === 'ClassDefinition') {
+      const name = extractClassName(c, source);
+      if (name) classes.push(name);
+    }
+    c = c.nextSibling;
+  }
+}
+
+// Collect variable names from an AssignStatement target side (before the first AssignOp).
+// Handles: x = ..., x, y = ..., a, *b, c = ..., x: T = ...
+function extractAssignTargets(node: SyntaxNode, source: string): string[] {
+  const names: string[] = [];
+  let c: SyntaxNode | null = node.firstChild;
+  while (c && c.type.name !== 'AssignOp') {
+    if (c.type.name === 'VariableName') {
+      const name = getText(source, c);
+      if (name !== '_') names.push(name);
+    }
+    c = c.nextSibling;
+  }
+  return names;
+}
+
 export class PyCellParser {
   /**
-   * Extract symbols from a single Python cell's source text.
-   * Skips IPython magic lines (%, %%, !) and cell-level decorators.
+   * Extract top-level symbols from a Python cell using a full AST parser.
+   * Handles multi-line imports, type annotations, decorators, and starred unpacking.
+   * IPython magic lines (%, %%, !) are blanked before parsing.
    */
   extractSymbols(source: string): CellSymbols {
-    const lines = source.split('\n');
+    const processed = blankMagicLines(source);
+    const tree = pythonParser.parse(processed);
+
     const imports: string[] = [];
     const variables: string[] = [];
     const functions: string[] = [];
     const classes: string[] = [];
 
-    for (const line of lines) {
-      const trimmed = line.trimStart();
+    let stmt: SyntaxNode | null = tree.topNode.firstChild;
+    while (stmt) {
+      switch (stmt.type.name) {
+        case 'ImportStatement':
+          imports.push(...extractImport(stmt, processed));
+          break;
 
-      // Skip blank lines, comments, IPython magics, and shell commands
-      if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('%') || trimmed.startsWith('!')) {
-        continue;
+        case 'FunctionDefinition': {
+          const name = extractFunctionName(stmt, processed);
+          if (name) functions.push(name);
+          break;
+        }
+
+        case 'ClassDefinition': {
+          const name = extractClassName(stmt, processed);
+          if (name) classes.push(name);
+          break;
+        }
+
+        case 'AssignStatement':
+          variables.push(...extractAssignTargets(stmt, processed));
+          break;
+
+        case 'DecoratedStatement':
+          extractDecoratedStatement(stmt, processed, functions, classes);
+          break;
       }
-
-      // from foo import bar, baz [as x, ...]
-      const fromImport = /^from\s+(\S+)\s+import\s+(.+)$/.exec(trimmed);
-      if (fromImport) {
-        const module = fromImport[1];
-        const rawNames = fromImport[2].split(',').map((n) => n.trim().split(/\s+as\s+/)[0].trim()).filter(Boolean);
-        imports.push(`${rawNames.join(', ')} from ${module}`);
-        continue;
-      }
-
-      // import foo [as bar], baz [as qux]
-      const simpleImport = /^import\s+(.+)$/.exec(trimmed);
-      if (simpleImport) {
-        const parts = simpleImport[1].split(',').map((p) => p.trim()).filter(Boolean);
-        imports.push(...parts);
-        continue;
-      }
-
-      // Only parse top-level (non-indented) statements for variables, functions, classes
-      if (line.startsWith(' ') || line.startsWith('\t')) continue;
-
-      // def / async def
-      const funcMatch = /^(?:async\s+)?def\s+(\w+)\s*\(/.exec(trimmed);
-      if (funcMatch) {
-        functions.push(funcMatch[1]);
-        continue;
-      }
-
-      // class Foo[(...)][:]
-      const classMatch = /^class\s+(\w+)\s*[:([]/.exec(trimmed);
-      if (classMatch) {
-        classes.push(classMatch[1]);
-        continue;
-      }
-
-      // Top-level assignment: x = ... or x, y = ...
-      // Exclude augmented assigns (+=, -=, etc.) and type annotations without value (:)
-      const varMatch = /^([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)\s*=(?![>=])/.exec(trimmed);
-      if (varMatch) {
-        const names = varMatch[1]
-          .split(',')
-          .map((n) => n.trim())
-          .filter((n) => n && n !== '_' && /^[A-Za-z_]\w*$/.test(n));
-        variables.push(...names);
-      }
+      stmt = stmt.nextSibling;
     }
 
     return {
@@ -110,7 +198,6 @@ export class PyCellParser {
     const markerLines: Array<{ lineNum: number; kind: 'code' | 'markup'; title?: string }> = [];
 
     for (let i = 0; i < lines.length; i++) {
-      // Matches: # %%, # %% [markdown], # %% Title, # %% [markdown] Title
       const match = /^# %%(.*)$/.exec(lines[i]);
       if (!match) continue;
       const rest = match[1];
@@ -123,7 +210,6 @@ export class PyCellParser {
 
     const boundaries: PyCellBoundary[] = [];
 
-    // Implicit cell: content before the first # %% marker
     if (markerLines[0].lineNum > 0) {
       boundaries.push({ startLine: 0, endLine: markerLines[0].lineNum - 1, kind: 'code' });
     }

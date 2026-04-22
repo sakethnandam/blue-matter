@@ -56,6 +56,32 @@ function extractWithPatterns(
   return results;
 }
 
+function parseJsImportClause(clause: string, names: string[]): void {
+  if (clause.startsWith('type ')) return;
+  const braceIdx = clause.indexOf('{');
+  const closeIdx = clause.indexOf('}');
+  let defaultPart: string;
+  if (braceIdx > 0) {
+    defaultPart = clause.slice(0, braceIdx).trim().replace(/,$/, '').trim();
+  } else if (braceIdx < 0) {
+    defaultPart = clause;
+  } else {
+    defaultPart = '';
+  }
+  const namedPart = braceIdx >= 0 && closeIdx > braceIdx ? clause.slice(braceIdx + 1, closeIdx) : '';
+  const nsMatch = /^\*\s+as\s+(\w+)$/.exec(defaultPart);
+  if (nsMatch) {
+    names.push(nsMatch[1]);
+  } else if (defaultPart) {
+    names.push(defaultPart);
+  }
+  for (const spec of namedPart.split(',').map((s) => s.trim())) {
+    if (!spec || /^type\s+/.test(spec)) continue;
+    const n = spec.split(/\s+as\s+/)[0].trim();
+    if (n) names.push(n);
+  }
+}
+
 function detectLanguage(filePath: string): string {
   const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
   if (['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs'].includes(ext)) return 'javascript';
@@ -73,17 +99,19 @@ export class GenericParser implements Parser {
   }
 
   parse(content: string, filePath: string): ParseResult {
+    const safeContent = content.slice(0, 100_000).replaceAll('\0', '');
+    const safeFilePath = filePath.replaceAll('\0', '');
     // Treat .ipynb as Python: caller passes pre-extracted code content
-    const effectivePath = filePath.toLowerCase().endsWith('.ipynb')
-      ? filePath.slice(0, -5) + 'py'
-      : filePath;
+    const effectivePath = safeFilePath.toLowerCase().endsWith('.ipynb')
+      ? safeFilePath.slice(0, -5) + 'py'
+      : safeFilePath;
     const lang = detectLanguage(effectivePath);
     const patterns = lang === 'python' ? PYTHON_PATTERNS : JS_TS_PATTERNS;
     const symbols: ReturnType<typeof createSymbol>[] = [];
-    const relativePath = filePath.replace(/\\/g, '/'); // keep original path for storage
+    const relativePath = safeFilePath.replaceAll('\\', '/'); // keep original path for storage
 
     for (const type of ['function', 'class'] as const) {
-      for (const { name, lineStart, lineEnd } of extractWithPatterns(content, patterns, type)) {
+      for (const { name, lineStart, lineEnd } of extractWithPatterns(safeContent, patterns, type)) {
         symbols.push(
           createSymbol({
             name,
@@ -98,7 +126,7 @@ export class GenericParser implements Parser {
       }
     }
 
-    const imports = this.extractImports(content, lang);
+    const imports = this.extractImports(safeContent, lang);
     const exports = symbols.filter((s) => s.metadata.isExported).map((s) => s.name);
 
     return {
@@ -110,28 +138,38 @@ export class GenericParser implements Parser {
   }
 
   private extractImports(content: string, lang: string): string[] {
+    return lang === 'python'
+      ? this.extractPythonImports(content)
+      : this.extractJsImports(content);
+  }
+
+  private extractPythonImports(content: string): string[] {
     const names: string[] = [];
-    if (lang === 'python') {
-      const importRe = /(?:from\s+[\w.]+\s+)?import\s+(.+)/g;
-      let m: RegExpExecArray | null;
-      while ((m = importRe.exec(content)) !== null) {
-        const part = m[1].replace(/\s+as\s+\w+/, '').trim();
-        for (const name of part.split(',').map((s) => s.trim().split(/\s+as\s+/)[0])) {
-          if (name && !name.startsWith('*')) names.push(name);
-        }
+    // Mask triple-quoted strings so imports inside them are not extracted
+    let preprocessed = content.replaceAll(/"""[\s\S]*?"""|'''[\s\S]*?'''/g, '""');
+    // Join backslash line-continuations so multi-line bare imports are captured
+    preprocessed = preprocessed.replaceAll('\\\n', ' ');
+    // Capture parenthesized block (spans newlines via [^)]*) or rest of line
+    const importRe = /(?:from\s+[\w.]+\s+)?import\s+(\([^)]*\)|[^\n]+)/g;
+    let m: RegExpExecArray | null;
+    while ((m = importRe.exec(preprocessed)) !== null) {
+      // Strip inline comments, then normalize: strip surrounding parens, collapse whitespace
+      const part = m[1].trim()
+        .split('\n').map((l) => l.replace(/#.*$/, '')).join('\n')
+        .replaceAll(/^\(|\)$/g, '').replaceAll('\n', ' ').replaceAll(/\s+/g, ' ').trim();
+      for (const name of part.split(',').map((s) => s.trim().split(/\s+as\s+/)[0].trim())) {
+        if (name && !name.startsWith('*')) names.push(name);
       }
-    } else {
-      const importRe = /import\s+(?:\{([^}]+)\}|(\w+)|(\w+)\s+as\s+\w+)\s+from\s+['"][^'"]+['"]/g;
-      let m: RegExpExecArray | null;
-      while ((m = importRe.exec(content)) !== null) {
-        const named = m[1];
-        const defaultName = m[2];
-        if (named) {
-          for (const n of named.split(',').map((s) => s.trim().split(/\s+as\s+/)[0].trim())) {
-            if (n) names.push(n);
-          }
-        } else if (defaultName) names.push(defaultName);
-      }
+    }
+    return names;
+  }
+
+  private extractJsImports(content: string): string[] {
+    const names: string[] = [];
+    let m: RegExpExecArray | null;
+    const importRe = /import\s+([^;'"]+?)\s+from\s*['"][^'"]+['"]/g;
+    while ((m = importRe.exec(content)) !== null) {
+      parseJsImportClause(m[1].trim(), names);
     }
     return names;
   }

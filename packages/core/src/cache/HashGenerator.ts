@@ -10,11 +10,11 @@ import { createHash } from 'node:crypto';
 function normalizeForHash(code: string): string {
   return code
     .trim()
-    .replace(/\r\n/g, '\n')
-    .replace(/\r/g, '\n')
-    .replace(/\s+/g, ' ')
-    .replace(/\/\/[^\n]*/g, '')
-    .replace(/\/\*[\s\S]*?\*\//g, '');
+    .replaceAll('\r\n', '\n')
+    .replaceAll('\r', '\n')
+    .replaceAll(/\s+/g, ' ')
+    .replaceAll(/\/\/[^\n]*/g, '')
+    .replaceAll(/\/\*[\s\S]*?\*\//g, '');
 }
 
 /**
@@ -34,7 +34,7 @@ export function generateCodeHash(code: string, extraContext?: string): string {
  */
 export function generateStructuralSignature(code: string): string {
   const normalized = normalizeForHash(code);
-  const noStrings = normalized.replace(/(['"`])(?:(?!\1)[^\\]|\\.)*\1/g, '""');
-  const noNumbers = noStrings.replace(/\b\d+\.?\d*\b/g, '0');
+  const noStrings = normalized.replaceAll(/(['"`])(?:(?!\1)[^\\]|\\.)*\1/g, '""');
+  const noNumbers = noStrings.replaceAll(/\b\d+\.?\d*\b/g, '0');
   return noNumbers;
 }

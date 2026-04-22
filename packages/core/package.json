@@ -18,6 +18,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@lezer/common": "^1.5.2",
+    "@lezer/python": "^1.1.18",
     "fast-glob": "^3.3.2",
     "sql.js": "^1.11.0"
   },

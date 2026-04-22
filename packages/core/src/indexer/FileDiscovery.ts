@@ -59,7 +59,7 @@ export class FileDiscovery {
     const maxTotalSizeBytes = options.maxTotalSizeBytes ?? 50 * 1024 * 1024;
 
     const absoluteRoot = path.resolve(rootPath);
-    const patterns = include.map((p) => path.join(absoluteRoot, p).replace(/\\/g, '/'));
+    const patterns = include.map((p) => path.join(absoluteRoot, p).replaceAll('\\', '/'));
 
     const entries = await fg(patterns, {
       cwd: absoluteRoot,
