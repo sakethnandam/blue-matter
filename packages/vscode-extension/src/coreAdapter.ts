@@ -4,8 +4,8 @@
  */
 
 import * as vscode from 'vscode';
-import * as path from 'path';
-import * as fs from 'fs';
+import * as path from 'node:path';
+import * as fs from 'node:fs';
 
 /** Secret key for API key in VS Code SecretStorage (OS keychain). */
 export const BLUE_MATTER_API_KEY_SECRET = 'blue-matter-api-key';
@@ -17,7 +17,7 @@ let coreInitPromise: Promise<import('@blue-matter/core').BlueMatterCore> | null 
 
 /** OpenRouter model names must follow the org/model or org/model:variant pattern. */
 function isValidModelName(model: string): boolean {
-  return /^[a-zA-Z0-9][a-zA-Z0-9._\-]{0,63}\/[a-zA-Z0-9][a-zA-Z0-9._\-:]{0,100}$/.test(model);
+  return /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}\/[a-zA-Z0-9][a-zA-Z0-9._\-:]{0,100}$/.test(model);
 }
 
 /** Validates Open Router API key format. Never log the key. */
@@ -61,7 +61,7 @@ async function resolveApiKey(context: vscode.ExtensionContext): Promise<string> 
   }
 
   const fromEnv = process.env.OPENROUTER_API_KEY?.trim();
-  return fromEnv || '';
+  return (fromEnv && isValidApiKeyFormat(fromEnv)) ? fromEnv : '';
 }
 
 /** Returns true if a key is available from SecretStorage or env (no migration). */
@@ -69,7 +69,7 @@ export async function hasStoredApiKey(context: vscode.ExtensionContext): Promise
   const fromSecrets = await context.secrets.get(BLUE_MATTER_API_KEY_SECRET);
   if (fromSecrets && isValidApiKeyFormat(fromSecrets)) return true;
   const fromEnv = process.env.OPENROUTER_API_KEY?.trim();
-  return !!fromEnv;
+  return !!(fromEnv && isValidApiKeyFormat(fromEnv));
 }
 
 /** Prompt user to enter Open Router API key; store in SecretStorage only (PRD: OS keychain). */

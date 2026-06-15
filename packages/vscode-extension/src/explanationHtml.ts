@@ -13,14 +13,17 @@ const ALLOWED_TAGS = new Set([
 /** Schemes we allow for <a href> (strip javascript:, data:, etc.). */
 const SAFE_LINK_SCHEMES = new Set(['https:', 'http:']);
 
+/** Match quoted or unquoted href value; factored to avoid repeated prefix and reduce regex complexity. */
+const HREF_RE = /href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i;
+
 /** Escape a string for safe use inside a double-quoted HTML attribute (XSS defense-in-depth). */
 function escapeAttrValue(s: string): string {
   return s
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/`/g, '&#96;');
+    .replaceAll('&', '&amp;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('`', '&#96;');
 }
 
 /**
@@ -33,13 +36,13 @@ function decodeHtmlEntities(s: string): string {
   while (prev !== s) {
     prev = s;
     s = s
-      .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
-      .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'");
+      .replaceAll(/&#(\d+);/g, (_, dec) => { const cp = Number.parseInt(dec, 10); return cp >= 0 && cp <= 0x10FFFF && (cp < 0xD800 || cp > 0xDFFF) ? String.fromCodePoint(cp) : ''; })
+      .replaceAll(/&#x([0-9a-fA-F]+);/g, (_, hex) => { const cp = Number.parseInt(hex, 16); return cp >= 0 && cp <= 0x10FFFF && (cp < 0xD800 || cp > 0xDFFF) ? String.fromCodePoint(cp) : ''; })
+      .replaceAll('&amp;', '&')
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .replaceAll('&quot;', '"')
+      .replaceAll('&#39;', "'");
   }
   return s;
 }
@@ -50,16 +53,19 @@ function decodeHtmlEntities(s: string): string {
  * Href is decoded before protocol check so entity-encoded schemes cannot bypass (PRD 6.2).
  */
 function sanitizeHtml(html: string): string {
-  // Strip HTML comments first to prevent parser differential attacks
-  const noComments = html.replace(/<!--[\s\S]*?-->/g, '');
-  const out = noComments.replace(/<\/?([a-zA-Z0-9]+)(\s[^>]*)?\/?>/g, (full, tagName) => {
+  // Strip HTML comments first to prevent parser differential attacks; also strip any
+  // dangling unclosed opener so '<!-- injection' cannot reach the webview.
+  const noComments = html
+    .replaceAll(/<!--[\s\S]*?-->/g, '')
+    .replace(/<!--[\s\S]*$/, '');
+  const out = noComments.replaceAll(/<\/?([a-zA-Z0-9]+)(\s[^>]*)?\/?>/g, (full, tagName) => {
     const name = tagName.toLowerCase();
     if (!ALLOWED_TAGS.has(name)) return '';
     if (full.startsWith('</')) return `</${name}>`;
     // Opening tag: allow only safe attributes per tag
     if (name === 'a') {
       // Match quoted ("...", '...') and unquoted (value until space or >) so unquoted href=javascript:... is validated
-      const hrefMatch = full.match(/href\s*=\s*"([^"]*)"|href\s*=\s*'([^']*)'|href\s*=\s*([^\s>]+)/i);
+      const hrefMatch = HREF_RE.exec(full);
       let href = hrefMatch ? (hrefMatch[1] ?? hrefMatch[2] ?? hrefMatch[3] ?? '').trim() : '';
       if (!href) href = '#';
       href = decodeHtmlEntities(href);
@@ -84,7 +90,8 @@ function sanitizeHtml(html: string): string {
  */
 export function markdownToSafeHtml(text: string): string {
   if (typeof text !== 'string') return '';
-  const raw = marked.parse(text, {
+  const cleanedText = text.replaceAll('\0', '');
+  const raw = marked.parse(cleanedText, {
     async: false,
     gfm: true,
     breaks: true,

@@ -8,7 +8,7 @@
  */
 
 import * as vscode from 'vscode';
-import * as path from 'path';
+import * as path from 'node:path';
 import type { NotebookCellContext } from '@blue-matter/core';
 
 export const ALLOWED_SCHEMES = ['file', 'untitled', 'vscode-notebook-cell'] as const;
@@ -173,7 +173,7 @@ function buildPyCellModeContext(
   // Find all # %% marker positions
   const markers: Array<{ line: number; kind: 'code' | 'markup' }> = [];
   for (let i = 0; i < lines.length; i++) {
-    if (/^# %%/.test(lines[i])) {
+    if (lines[i].startsWith('# %%')) {
       const isMarkdown = /\[markdown\]/i.test(lines[i]);
       markers.push({ line: i, kind: isMarkdown ? 'markup' : 'code' });
     }

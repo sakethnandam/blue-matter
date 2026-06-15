@@ -18,11 +18,7 @@
     "Machine Learning",
     "Education"
   ],
-  "keywords": ["ai", "code explanation", "openrouter", "learning", "productivity"],
-  "galleryBanner": {
-    "color": "#1a1a2e",
-    "theme": "dark"
-  },
+  "keywords": ["ai", "code-explanation", "openrouter", "learning", "productivity"],
   "activationEvents": [
     "onStartupFinished"
   ],
@@ -125,13 +121,11 @@
     "bundle:watch": "node esbuild.mjs --watch",
     "compile": "tsc -p . --noEmit",
     "watch": "tsc -watch -p . --noEmit",
-    "package": "vsce package --no-dependencies"
-  },
-  "dependencies": {
-    "@blue-matter/core": "file:../core",
-    "marked": "17.0.1"
+    "package": "vsce package --no-dependencies",
+    "publish": "vsce publish --no-dependencies"
   },
   "devDependencies": {
+    "marked": "17.0.1",
     "@types/vscode": "^1.80.0",
     "@types/node": "^22.10.1",
     "@vscode/vsce": "^3.0.0",

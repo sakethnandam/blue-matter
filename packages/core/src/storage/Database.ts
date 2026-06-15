@@ -12,6 +12,7 @@ export interface DatabaseConfig {
 }
 
 type SqlJsDatabase = import('sql.js').Database;
+type SqlParam = string | number | null;
 
 export class BlueMatterDatabase {
   private db: SqlJsDatabase | null = null;
@@ -81,11 +82,11 @@ export class BlueMatterDatabase {
     return this.db;
   }
 
-  run(sql: string, ...params: unknown[]): { changes: number; lastInsertRowid: number } {
+  run(sql: string, ...params: SqlParam[]): { changes: number; lastInsertRowid: number } {
     const db = this.ensureOpen();
     const stmt = db.prepare(sql);
     try {
-      stmt.bind(params as (string | number | null)[]);
+      stmt.bind(params);
       stmt.step();
       const changes = db.getRowsModified();
       const rowidResult = db.exec('SELECT last_insert_rowid() as lastInsertRowid');
@@ -98,11 +99,11 @@ export class BlueMatterDatabase {
     }
   }
 
-  get<T>(sql: string, ...params: unknown[]): T | undefined {
+  get<T>(sql: string, ...params: SqlParam[]): T | undefined {
     const db = this.ensureOpen();
     const stmt = db.prepare(sql);
     try {
-      stmt.bind(params as (string | number | null)[]);
+      stmt.bind(params);
       if (!stmt.step()) return undefined;
       return stmt.getAsObject() as T;
     } finally {
@@ -110,11 +111,11 @@ export class BlueMatterDatabase {
     }
   }
 
-  all<T>(sql: string, ...params: unknown[]): T[] {
+  all<T>(sql: string, ...params: SqlParam[]): T[] {
     const db = this.ensureOpen();
     const stmt = db.prepare(sql);
     try {
-      stmt.bind(params as (string | number | null)[]);
+      stmt.bind(params);
       const rows: T[] = [];
       while (stmt.step()) {
         rows.push(stmt.getAsObject() as T);

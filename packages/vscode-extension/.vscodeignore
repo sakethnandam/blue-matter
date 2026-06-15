@@ -1,34 +1,20 @@
-node_modules/**
+# Whitelist approach: exclude everything, then re-include only what belongs in the VSIX.
+# Required for monorepos — vsce traverses workspace symlinks and parent directories,
+# pulling in .git/, core source, root config files, and other junk without this.
 
-# Source — only ship compiled output
-src/**
-**/*.ts
-!**/*.d.ts
-tsconfig.json
-tsconfig*.json
+**
 
-# Tests
-**/*.test.js
-**/*.test.d.ts
-**/*.spec.js
+# Bundled extension runtime
+!out/
+!out/extension.js
+!out/sql-wasm.wasm
 
-# Source maps — reduce VSIX size
-out/**/*.js.map
+# Marketplace metadata
+!package.json
+!README.md
+!CHANGELOG.md
+!LICENSE
 
-# Dev tooling
-.eslintrc*
-.prettierrc*
-jest.config*
-.vscode/**
-!.vscode/extensions.json
-
-# Root-level monorepo files that must not end up in the package
-../../node_modules/**
-../../package.json
-../../package-lock.json
-../../README.md
-
-# Local dev artifacts
-.env
-.env.*
-*.vsix
+# Icon
+!assets/
+!assets/blue-matter.png
