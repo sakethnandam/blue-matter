@@ -171,7 +171,7 @@ User selects code in editor
 
 ### Architecture
 - `vscode-extension/src/documentResolver.ts` — single module that normalizes "where is the user and what did they select?" for regular files, notebook cells, and `# %%` Python cell-mode files. All notebook-specific VS Code API calls live here.
-- `core/src/notebook/PyCellParser.ts` — regex-based symbol extractor (imports, variables, functions, classes) and `# %%` cell boundary parser. No AST parsing — tolerant of IPython magics and incomplete cell code.
+- `core/src/notebook/PyCellParser.ts` — AST-based symbol extractor (imports, variables, functions, classes) using `@lezer/python`, plus a regex-based `# %%` cell boundary parser. IPython magic lines (`%`, `%%`, `!`) are blanked before parsing so the AST stays valid; handles multi-line imports, type annotations, decorators, and starred unpacking.
 - `core/src/notebook/NotebookContextBuilder.ts` — builds a compact text summary (< 2000 chars / ~500 tokens) from preceding cells. Hash is computed over the summary, not raw code, so editing only comments in a prior cell does NOT invalidate downstream cache entries.
 - `ExplainCodeOptions.notebookContext` — optional `NotebookCellContext` field; when present, `BlueMatterCore` uses a notebook-aware cache key and injects the dependency summary into the AI prompt.
 
