@@ -10,6 +10,9 @@
 - Preceding notebook cells were passed to the Python parser without a size cap or null-byte stripping. They are now pre-processed consistently with the selected cell (100 KB cap, null bytes removed).
 - Notebook dependency summary was embedded in AI prompts without sanitization. It now goes through the same `sanitizeAnnotation` pass used for the repo map.
 
+### Maintenance
+- Updated build tooling and resolved dependency security advisories (bundler refreshed; high-severity transitive advisories cleared). No change to extension behavior.
+
 ## [0.1.0] - 2026-04-03
 
 ### Added

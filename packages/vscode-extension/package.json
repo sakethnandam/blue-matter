@@ -2,7 +2,7 @@
   "name": "blue-matter",
   "displayName": "Blue Matter for VS Code",
   "description": "Context-aware AI explanations for any code you select. Understands your repo, caches results, and explains in plain English.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "blue-matter",
   "icon": "assets/blue-matter.png",
   "license": "MIT",
